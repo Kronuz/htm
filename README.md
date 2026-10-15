@@ -1,5 +1,7 @@
 # htm
 
+[![CI](https://github.com/Kronuz/htm/actions/workflows/ci.yml/badge.svg)](https://github.com/Kronuz/htm/actions/workflows/ci.yml)
+
 A C++20 implementation of the Hierarchical Triangular Mesh (HTM): a spatial
 index that tiles the sphere with nested triangles ("trixels") and gives every
 point a name and an integer id. Extracted from
