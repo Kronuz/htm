@@ -1,0 +1,19 @@
+# htm: nested spherical triangles; a name prefix is an area, an id range its subtree.
+# Render: d2 --layout elk --sketch --theme 302 docs/htm.d2 docs/htm.svg
+direction: right
+
+point: point {
+  label: "Sydney\n−33.87°, 151.21°"
+}
+levels: trixel name {
+  s: "S"
+  s1: "S1"
+  s13: "S13"
+  leaf: "S1301…301131"
+  s -> s1 -> s13 -> leaf: "+1 digit per level"
+}
+range: id range {
+  label: "getRange(\"S13\")\n[start, end] covers\nevery descendant"
+}
+point -> levels.leaf: "getTrixelName()"
+levels.s13 -> range

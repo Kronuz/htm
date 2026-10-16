@@ -16,7 +16,9 @@ test/test.cc     Runnable smoke test: naming/id, lat/lon points, round trip, get
 examples/demo.cc A runnable tour (not a test).
 CMakeLists.txt   STATIC library `htm` (+ alias htm::htm); FetchContent cartesian; CTest test `htm`.
 LICENSE          MIT, Copyright (c) 2015-2019 Dubalu LLC.
-README.md        What it is, install, usage, API.
+README.md                    What it is, install, quick start.
+docs/API.md                  Usage and the full surface: naming, ranges, set algebra, constraints.
+docs/htm.d2                  The README diagram's source (docs/htm.svg is rendered from it).
 ARCHITECTURE.md  Internal design: the mesh, naming, ids, ranges, set ops, Constraint.
 ```
 
