@@ -39,13 +39,18 @@ bits for the root (`10` for `N`, `11` for `S`) and two bits per level for each
 
 ## Naming a point
 
-`getTrixelName(coord)` and `getId(coord)` walk the same descent. `startTrixel`
-picks the root octant from the signs of `coord.x/y/z`. Then, level by level, the
-three edge midpoints are computed (`midPoint` averages two vertices and
-re-normalizes), and `insideVertex_Trixel` (a sign-of-cross-products test) decides
-which of the four children contains the point. `getTrixelName` appends the digit;
-`getId` shifts left two bits and adds it. Both run a fixed `HTM_MAX_LEVEL`
-iterations, so every point gets a full-depth name.
+`getId(coord)` walks the descent. `startTrixel` picks the root octant from the
+signs of `coord.x/y/z`. Then, level by level, the three edge midpoints are computed
+(`midPoint` averages two vertices and re-normalizes), and `insideVertex_Trixel` (a
+sign-of-cross-products test) decides which of the four children contains the point.
+`getId` shifts left two bits and adds the child's digit. It runs a fixed
+`HTM_MAX_LEVEL` iterations, so every point gets a full-depth id.
+`getTrixelName(coord)` is `getTrixelName(getId(coord))`.
+
+The descent runs on a plain three-double vector, not on `Cartesian` objects (which
+carry a scale and an SRID). Each operation repeats the exact floating-point
+expression of `Cartesian`'s `+`, `^`, `*`, and `normalize()` in the same order, so
+the ids are bit-identical to an object-based walk.
 
 `getCorners(name)` replays the descent from the digits instead of from a point,
 returning the three vertices of the named trixel. A digit outside `0..3` past the
@@ -91,7 +96,7 @@ HTM uses constraints to range a circular region: `getBoundingCircle` returns the
 cap that circumscribes a trixel, `intersectConstraints` tests two caps,
 `insideVertex_Constraint` tests a point against a cap, and `intersection` tests a
 cap against a trixel edge. A region-to-trixels search (built on top of these in
-the original Xapiand geometry layer) descends the mesh, keeping trixels fully
+Xapiand's geometry layer) descends the mesh, keeping trixels fully
 inside, recursing into partial ones, and pruning trixels whose bounding circle
 misses the constraint.
 
@@ -104,5 +109,5 @@ The naming and id encoding are the whole point: they make spatial locality a
 string/integer prefix, so a spatial query becomes prefix matching or range
 lookup in whatever store you already have. The library stops at that core plus
 the cap primitive. It deliberately does not pull in the `Geometry`/`Collection`
-class hierarchy that the original file used only for debug visualization, so the
+class hierarchy that upstream uses only for debug visualization, so the
 dependency is just `Cartesian`.

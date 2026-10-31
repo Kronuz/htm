@@ -1,6 +1,5 @@
-// Frozen copies of the pre-optimization HTM::getId / getTrixelName (they build
-// a Cartesian per midpoint). Used by the differential test and the benchmark as
-// the reference; do not "improve" them.
+// Reference HTM::getId / getTrixelName that build a Cartesian per midpoint: the
+// oracle for the differential test and the benchmark. Keep them unchanged.
 #pragma once
 
 #include <cmath>

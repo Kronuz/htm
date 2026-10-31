@@ -1,5 +1,5 @@
 // Benchmark: HTM::getId / getTrixelName(Cartesian) / getTrixelName(id) against
-// the frozen original (test/frozen.h) on random unit vectors.
+// the reference implementation (test/frozen.h) on random unit vectors.
 //
 // Build: cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build --target htm_bench
 // Run:   ./build/htm_bench [points]

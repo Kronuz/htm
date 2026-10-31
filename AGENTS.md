@@ -53,7 +53,7 @@ the library's only dependency.
   `std::format`; don't drop the target below 20.
 - **Filenames are stable.** `htm.h` / `htm.cc` keep their original Xapiand names
   so a consumer that already `#include`s the header just needs this repo on the
-  include path. `constraint.h` / `constraint.cc` are new but named to match.
+  include path. `constraint.h` / `constraint.cc` exist only here and are named to match.
 - Tabs for indentation, double quotes in code, no em dashes in prose.
 - MIT-licensed; keep the copyright header on source files.
 
@@ -87,7 +87,7 @@ the library's only dependency.
 - **`getCorners` only validates digits past the root.** The loop runs over
   `name[2..len)`, so a bad character at index >= 2 throws `std::invalid_argument`,
   but a two-character root like `"N9"` is never checked (the loop doesn't run).
-  This matches the original behavior; don't "fix" it without a reason.
+  Upstream behaves the same way; don't "fix" it without a reason.
 - **`getId` doesn't validate.** `getId(name)` trusts its input and bit-packs
   whatever digits it sees. Garbage in, garbage out.
 - **Ranges join adjacent integers.** `insertGreaterRange` and `simplifyRanges`
@@ -97,26 +97,30 @@ the library's only dependency.
 ## Standalone vs. Xapiand
 
 This is a standalone extraction from
-[Xapiand](https://github.com/Kronuz/Xapiand). Three surgical changes were made on
-extraction, none touching the trixel naming/id/range/set-operation core:
+[Xapiand](https://github.com/Kronuz/Xapiand). It differs from upstream in four
+ways; the trixel naming, id, range, and set-operation results match upstream:
 
-- **Absorbed `Constraint`.** The spherical-cap class lived in Xapiand's
-  `geometry.{h,cc}` but depends only on `Cartesian`, so it moved into
-  `constraint.{h,cc}` here. `htm.h`'s old `class Constraint;` forward declaration
-  became `#include "constraint.h"`. `PI_HALF` / `DBL_TOLERANCE` come from
+- **`Constraint` lives here.** Upstream keeps the spherical-cap class in
+  `geometry.{h,cc}`; it depends only on `Cartesian`, so here it is
+  `constraint.{h,cc}`, and `htm.h` does `#include "constraint.h"` instead of
+  forward-declaring `class Constraint;`. `PI_HALF` / `DBL_TOLERANCE` come from
   `cartesian.h`; the earth-radius constants (`M_PER_RADIUS_EARTH`,
   `MAX_RADIUS_HALFSPACE_EARTH`, `MIN_RADIUS_METERS`, `MIN_RADIUS_RADIANS`,
-  `RADIUS_GREAT_CIRCLE`) came along into `constraint.h`.
-- **Dropped the visualization writers.** The tail of `htm.cc`
-  (`writeGoogleMap` / `writeGoogleMapPlotter` / `writePython3D` /
-  `writeGrahamScanMap` / `writeGrahamScan3D` and their `static` helpers) wrote
-  Google-Maps and matplotlib debug files and was the only thing coupling HTM to
-  the `Geometry`/`Collection` hierarchy and `collection.h`. All of it, plus the
-  matching declarations and the `class Geometry;` forward declaration, is gone.
-  No core function called any of it.
-- **`strings::format` -> `std::format`.** The only uses outside the dropped
-  writers were `range_t::to_string` (header) and the one error message in
-  `getCorners` (which also stopped using Xapiand's `THROW`/`HTMError` and now
-  throws `std::invalid_argument`). `"strings.hh"` is gone.
+  `RADIUS_GREAT_CIRCLE`) are in `constraint.h`.
+- **No visualization writers.** Upstream's `htm.cc` ends with `writeGoogleMap` /
+  `writeGoogleMapPlotter` / `writePython3D` / `writeGrahamScanMap` /
+  `writeGrahamScan3D` and their `static` helpers, which write Google-Maps and
+  matplotlib debug files and are the only thing coupling HTM to the
+  `Geometry`/`Collection` hierarchy and `collection.h`. This copy has none of them,
+  no matching declarations, and no `class Geometry;` forward declaration. No core
+  function calls them.
+- **`std::format` instead of `strings::format`.** `range_t::to_string` (header) and
+  the error message in `getCorners` use `std::format`, and `getCorners` throws
+  `std::invalid_argument` instead of Xapiand's `THROW`/`HTMError`. There is no
+  `"strings.hh"` include.
+- **Vector descent.** `getId(Cartesian)` descends on a plain three-double vector,
+  and `getTrixelName(Cartesian)` derives the name from the id (see
+  `ARCHITECTURE.md`). `test/diff_test.cc` holds the ids bit-identical to the
+  `Cartesian`-object walk in `test/frozen.h`.
 
 Keep these reconcilable with upstream as plain edits.

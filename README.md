@@ -75,6 +75,7 @@ trixel's corners.
   examples.
 - [ARCHITECTURE.md](ARCHITECTURE.md): the subdivision, the id encoding, and the
   range math.
+- [CHANGELOG.md](CHANGELOG.md): changes by date.
 - [AGENTS.md](AGENTS.md): repository map, invariants, and traps.
 
 ## 🛠️ Building and testing
@@ -82,23 +83,18 @@ trixel's corners.
 ```sh
 cmake -B build && cmake --build build && ctest --test-dir build
 ./build/htm_demo
+./build/htm_bench [points]   # getId and getTrixelName against the reference test/frozen.h
 ```
+
+`test/diff_test.cc` (CTest `htm_diff`) checks that `getId` and `getTrixelName`
+return exactly what the reference `Cartesian`-object implementation returns, on
+random points, poles, signed zeros, axis planes, and trixel vertices and midpoints.
 
 ## 🤝 Contributing
 
 Issues and pull requests are welcome. Ids are stored in indexes, so the encoding
 must not change; read [AGENTS.md](AGENTS.md) first. CI must pass on every
 platform.
-
-## Performance note
-
-`getId(Cartesian)` and `getTrixelName(Cartesian)` run the 25-level descent on plain
-three-double vectors that repeat the exact arithmetic of `Cartesian`'s `+`, `^`, `*` and
-`normalize()`, so ids are bit-identical to the object-based walk (`test/diff_test.cc` checks
-tens of millions of points, poles and trixel edges against a frozen copy). Building a
-`Cartesian` per midpoint, with its scale and SRID and an out-of-line constructor, cost as
-much as the math. `getTrixelName(Cartesian)` is `getTrixelName(getId(...))`.
-`./build/htm_bench` compares against the frozen original.
 
 ## 📄 License
 

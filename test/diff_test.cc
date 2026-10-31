@@ -1,10 +1,8 @@
-// Differential test: the optimized HTM::getId / getTrixelName must return
-// exactly what the original Cartesian-object implementation returned.
-//
-// The "frozen" functions (frozen.h) are verbatim copies of the pre-optimization
-// code (they build a Cartesian per midpoint). Inputs are random points on the
-// sphere plus the cases that decide ties: poles, axis planes, signed zeros,
-// start-trixel edges, and exact trixel vertices/midpoints at many levels.
+// Differential test: HTM::getId / getTrixelName must return exactly what the
+// reference Cartesian-object implementation in frozen.h returns (it builds a
+// Cartesian per midpoint). Inputs are random points on the sphere plus the
+// cases that decide ties: poles, axis planes, signed zeros, start-trixel edges,
+// and exact trixel vertices/midpoints at many levels.
 //
 // Usage: htm_diff_test [random_points]   (default 2,000,000)
 #include <cmath>
