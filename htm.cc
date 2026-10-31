@@ -558,44 +558,89 @@ HTM::simplifyRanges(std::vector<range_t>& ranges)
 }
 
 
-std::string
-HTM::getTrixelName(const Cartesian& coord)
+namespace {
+
+// Plain 3-vector for the hot descent. Every operation repeats the exact
+// floating-point expression of the matching Cartesian operator (operator+,
+// operator^, operator*, normalize()), in the same order, so that the ids are
+// bit-identical to the ones computed with Cartesian objects.
+struct V3 {
+	double x, y, z;
+};
+
+
+inline V3 midpoint(const V3& a, const V3& b) noexcept {
+	V3 w{a.x + b.x, a.y + b.y, a.z + b.z};
+	double n = std::sqrt(w.x * w.x + w.y * w.y + w.z * w.z);
+	return {w.x / n, w.y / n, w.z / n};
+}
+
+
+// (a ^ b) * c > 0, as in HTM::insideVertex_Trixel's building block.
+inline double triple(const V3& a, const V3& b, const V3& c) noexcept {
+	double cx = a.y * b.z - b.y * a.z;
+	double cy = a.z * b.x - b.z * a.x;
+	double cz = a.x * b.y - b.x * a.y;
+	return cx * c.x + cy * c.y + cz * c.z;
+}
+
+
+inline bool inside(const V3& v, const V3& v0, const V3& v1, const V3& v2) noexcept {
+	return triple(v0, v1, v) > 0 && triple(v1, v2, v) > 0 && triple(v2, v0, v) > 0;
+}
+
+}  // namespace
+
+
+uint64_t
+HTM::getId(const Cartesian& coord)
 {
 	const auto& start_trixel = startTrixel(coord);
-	auto v0 = start_vertices[start_trixel.v0];
-	auto v1 = start_vertices[start_trixel.v1];
-	auto v2 = start_vertices[start_trixel.v2];
-	auto name = start_trixel.name;
+	const auto& s0 = start_vertices[start_trixel.v0];
+	const auto& s1 = start_vertices[start_trixel.v1];
+	const auto& s2 = start_vertices[start_trixel.v2];
+	V3 v0{s0.x, s0.y, s0.z};
+	V3 v1{s1.x, s1.y, s1.z};
+	V3 v2{s2.x, s2.y, s2.z};
+	const V3 c{coord.x, coord.y, coord.z};
+	auto id = start_trixel.id;
 
 	// Search in children's trixel
 	int8_t depth = HTM_MAX_LEVEL;
 	while (depth-- > 0) {
-		auto w2 = midPoint(v0, v1);
-		auto w0 = midPoint(v1, v2);
-		auto w1 = midPoint(v2, v0);
-		if (insideVertex_Trixel(coord, v0, w2, w1)) {
-			name.push_back('0');
+		auto w2 = midpoint(v0, v1);
+		auto w0 = midpoint(v1, v2);
+		auto w1 = midpoint(v2, v0);
+		id <<= 2;
+		if (inside(c, v0, w2, w1)) {
 			v1 = w2;
 			v2 = w1;
-		} else if (insideVertex_Trixel(coord, v1, w0, w2)) {
-			name.push_back('1');
+		} else if (inside(c, v1, w0, w2)) {
+			id += 1;
 			v0 = v1;
 			v1 = w0;
 			v2 = w2;
-		} else if (insideVertex_Trixel(coord, v2, w1, w0)) {
-			name.push_back('2');
+		} else if (inside(c, v2, w1, w0)) {
+			id += 2;
 			v0 = v2;
 			v1 = w1;
 			v2 = w0;
 		} else {
-			name.push_back('3');
+			id += 3;
 			v0 = w0;
 			v1 = w1;
 			v2 = w2;
 		}
 	}
 
-	return name;
+	return id;
+}
+
+
+std::string
+HTM::getTrixelName(const Cartesian& coord)
+{
+	return getTrixelName(getId(coord));
 }
 
 
@@ -616,47 +661,6 @@ HTM::getTrixelName(uint64_t id)
 	}
 
 	return trixel;
-}
-
-
-uint64_t
-HTM::getId(const Cartesian& coord)
-{
-	const auto& start_trixel = startTrixel(coord);
-	auto v0 = start_vertices[start_trixel.v0];
-	auto v1 = start_vertices[start_trixel.v1];
-	auto v2 = start_vertices[start_trixel.v2];
-	auto id = start_trixel.id;
-
-	// Search in children's trixel
-	int8_t depth = HTM_MAX_LEVEL;
-	while (depth-- > 0) {
-		auto w2 = midPoint(v0, v1);
-		auto w0 = midPoint(v1, v2);
-		auto w1 = midPoint(v2, v0);
-		id <<= 2;
-		if (insideVertex_Trixel(coord, v0, w2, w1)) {
-			v1 = w2;
-			v2 = w1;
-		} else if (insideVertex_Trixel(coord, v1, w0, w2)) {
-			id += 1;
-			v0 = v1;
-			v1 = w0;
-			v2 = w2;
-		} else if (insideVertex_Trixel(coord, v2, w1, w0)) {
-			id += 2;
-			v0 = v2;
-			v1 = w1;
-			v2 = w0;
-		} else {
-			id += 3;
-			v0 = w0;
-			v1 = w1;
-			v2 = w2;
-		}
-	}
-
-	return id;
 }
 
 

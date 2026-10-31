@@ -90,6 +90,16 @@ Issues and pull requests are welcome. Ids are stored in indexes, so the encoding
 must not change; read [AGENTS.md](AGENTS.md) first. CI must pass on every
 platform.
 
+## Performance note
+
+`getId(Cartesian)` and `getTrixelName(Cartesian)` run the 25-level descent on plain
+three-double vectors that repeat the exact arithmetic of `Cartesian`'s `+`, `^`, `*` and
+`normalize()`, so ids are bit-identical to the object-based walk (`test/diff_test.cc` checks
+tens of millions of points, poles and trixel edges against a frozen copy). Building a
+`Cartesian` per midpoint, with its scale and SRID and an out-of-line constructor, cost as
+much as the math. `getTrixelName(Cartesian)` is `getTrixelName(getId(...))`.
+`./build/htm_bench` compares against the frozen original.
+
 ## 📄 License
 
 MIT, Copyright (c) 2015-2019 Dubalu LLC. See [LICENSE](LICENSE). Extracted from

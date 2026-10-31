@@ -39,6 +39,16 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   target_link_libraries(htm_test PRIVATE htm)
   add_test(NAME htm COMMAND htm_test)
 
+  # Differential test of getId/getTrixelName against a frozen copy of the
+  # original Cartesian-object implementation.
+  add_executable(htm_diff_test test/diff_test.cc)
+  target_link_libraries(htm_diff_test PRIVATE htm)
+  add_test(NAME htm_diff COMMAND htm_diff_test)
+
+  # Benchmark against the frozen original (not part of ctest).
+  add_executable(htm_bench bench/bench.cc)
+  target_link_libraries(htm_bench PRIVATE htm)
+
   # A runnable tour of the library (not a test): build & run ./build/htm_demo
   add_executable(htm_demo examples/demo.cc)
   target_link_libraries(htm_demo PRIVATE htm)
