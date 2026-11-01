@@ -47,6 +47,16 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   target_link_libraries(htm_diff_test PRIVATE htm)
   add_test(NAME htm_diff COMMAND htm_diff_test)
 
+  # The descent against the IEEE-754 reference on random points and on and next to the
+  # edges of the mesh at every level, and the exponent-halving square root it takes past
+  # depth 14 against std::sqrt on every input it gets.
+  add_executable(htm_descent_test test/descent_test.cc)
+  target_link_libraries(htm_descent_test PRIVATE htm)
+  add_test(NAME htm_descent COMMAND htm_descent_test)
+  add_executable(htm_sqrt_test test/sqrt_test.cc)
+  target_compile_features(htm_sqrt_test PRIVATE cxx_std_20)
+  add_test(NAME htm_sqrt COMMAND htm_sqrt_test)
+
   # The ids must not depend on the compiler's floating-point contraction. The
   # same test runs against a second build of htm.cc with contraction allowed
   # everywhere (-ffp-contract=fast, and -mfma on x86 when this machine runs it),
@@ -75,6 +85,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_executable(htm_fma_test test/diff_test.cc)
     target_link_libraries(htm_fma_test PRIVATE htm_fma)
     add_test(NAME htm_fma COMMAND htm_fma_test)
+    add_executable(htm_descent_fma_test test/descent_test.cc)
+    target_link_libraries(htm_descent_fma_test PRIVATE htm_fma)
+    add_test(NAME htm_descent_fma COMMAND htm_descent_fma_test)
 
     # The same, with getId forced onto the form that rounds each product behind an
     # asm: the form it falls back to when a compiler fuses despite the pragma.
@@ -87,6 +100,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_executable(htm_rounded_test test/diff_test.cc)
     target_link_libraries(htm_rounded_test PRIVATE htm_rounded)
     add_test(NAME htm_rounded COMMAND htm_rounded_test)
+    add_executable(htm_descent_rounded_test test/descent_test.cc)
+    target_link_libraries(htm_descent_rounded_test PRIVATE htm_rounded)
+    add_test(NAME htm_descent_rounded COMMAND htm_descent_rounded_test)
   endif()
 
   # Benchmark (not part of ctest). With HTM_BENCH_COMPARE it also times the SDSS HTM

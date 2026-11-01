@@ -24,7 +24,8 @@
 #include "htm.h"
 
 #include <algorithm>                              // for std::merge, std::back_inserter
-#include <cmath>                                  // for std::ceil, std::log2, std::pow, std::acos, std::sqrt, std::cos
+#include <cmath>                                  // for std::ceil, std::log2, std::pow, std::acos, std::sqrt, std::fmax, std::fabs
+#include <cstring>                                // for std::memcpy
 #include <format>                                 // for std::format
 #include <iterator>                               // for std::make_move_iterator
 #include <stdexcept>                              // for std::invalid_argument
@@ -673,20 +674,20 @@ HTM_NOFUSE_FN inline bool inside(const V3& v, const V3& v0, const V3& v1, const 
 }
 
 
+// The walk the ids are defined by: at each level the three midpoints, then the
+// first child whose three edge tests are positive, else the middle child. getId
+// takes it for an input outside the range the descent below is proved for.
 template <bool Round>
-HTM_NOFUSE_FN uint64_t descend(const Cartesian& coord) noexcept {
+HTM_NOFUSE_FN uint64_t walk(const V3& c, const trixel_t& start_trixel) noexcept {
 	HTM_NOFUSE_BODY
-	const auto& start_trixel = HTM::startTrixel(coord);
 	const auto& s0 = start_vertices[start_trixel.v0];
 	const auto& s1 = start_vertices[start_trixel.v1];
 	const auto& s2 = start_vertices[start_trixel.v2];
 	V3 v0{s0.x, s0.y, s0.z};
 	V3 v1{s1.x, s1.y, s1.z};
 	V3 v2{s2.x, s2.y, s2.z};
-	const V3 c{coord.x, coord.y, coord.z};
 	auto id = start_trixel.id;
 
-	// Search in children's trixel
 	int8_t depth = HTM_MAX_LEVEL;
 	while (depth-- > 0) {
 		auto w2 = midpoint<Round>(v0, v1);
@@ -714,6 +715,156 @@ HTM_NOFUSE_FN uint64_t descend(const Cartesian& coord) noexcept {
 		}
 	}
 
+	return id;
+}
+
+
+// RN(sqrt(q)) for q within 2^26 units in the last place of 4: halving the bits of
+// q (exponent and fraction together) is then exact (test/sqrt_test.cc checks every
+// such q). The sums of squares of the midpoints from depth HTM_NEAR4_DEPTH on are
+// within 2^19 units of 4.
+inline double sqrt_near4(double q) noexcept {
+	uint64_t b;
+	std::memcpy(&b, &q, sizeof b);
+	b = (b >> 1) + 0x1FF8000000000000ULL;
+	std::memcpy(&q, &b, sizeof q);
+	return q;
+}
+
+
+template <bool Round, bool Near4>
+HTM_NOFUSE_FN inline V3 midpoint_at(const V3& a, const V3& b) noexcept {
+	HTM_NOFUSE_BODY
+	if constexpr (Near4) {
+		V3 w{a.x + b.x, a.y + b.y, a.z + b.z};
+		double n = sqrt_near4(HTM_MUL(Round, w.x, w.x) + HTM_MUL(Round, w.y, w.y) + HTM_MUL(Round, w.z, w.z));
+		return {w.x / n, w.y / n, w.z / n};
+	} else {
+		return midpoint<Round>(a, b);
+	}
+}
+
+
+// A trixel of the walk and the tests of its edges against the point:
+// e0 = (v1 ^ v2) * c, e1 = (v2 ^ v0) * c, e2 = (v0 ^ v1) * c, as triple() rounds them.
+struct Trixel {
+	V3 v0, v1, v2;
+	double e0, e1, e2;
+};
+
+
+inline const V3& pick(int d, const V3& a, const V3& b, const V3& c, const V3& e) noexcept {
+	return d == 0 ? a : d == 1 ? b : d == 2 ? c : e;
+}
+
+
+// One level of the walk, without its branches. The child is predicted from the
+// parent's edge tests: the inner edge w1-w2 tests as e1 + e2 - e0 (over the two
+// midpoint norms, a positive factor), w2-w0 as e0 + e2 - e1 and w0-w1 as
+// e0 + e1 - e2, so the point is in child 0 when e1 + e2 - e0 < 0, and so on. The
+// child's own three edge tests, computed as the walk computes them, are then the
+// walk's three tests for that child, and are kept for the next level. They decide
+// the child alone for children 0 and 3. Children 1 and 2 also need the walk's
+// earlier children to fail: child 1 needs (w2 ^ w1) * c <= 0, child 2 that and
+// (w0 ^ w2) * c <= 0. Above HTM_EXACT_DEPTH a margin of 2^-44 max|c| on
+// e1 + e2 - e0 (e0 + e2 - e1) proves it, as below; past it, or without the
+// margin, the test is computed. Whatever fails the checks takes the walk's own
+// branches at this level.
+//
+// The margin. Each fp vertex v of the mesh is within 5.5u (u = 2^-53) of the unit
+// vector along the exact sum of its parents, and a computed triple product is
+// within 11.3u max|c| of the exact one. With m1 = |v2 + v0|, m2 = |v0 + v1| (both
+// at most 2 + 7u), (w1 ^ w2) * c is (e1 + e2 - e0) / (m1 m2) to within 30.4u
+// max|c| plus the three tests' error over m1 m2, and the sum rounds within 10.4u
+// max|c|, so (w2 ^ w1) * c < 0 when the rounded e1 + e2 - e0 exceeds 166u max|c|.
+// 2^-44 is 512u.
+template <bool Round, bool Near4, bool Certify>
+HTM_NOFUSE_FN inline void step(Trixel& t, uint64_t& id, const V3& c, double margin) noexcept {
+	HTM_NOFUSE_BODY
+	const V3 w0 = midpoint_at<Round, Near4>(t.v1, t.v2);
+	const V3 w1 = midpoint_at<Round, Near4>(t.v2, t.v0);
+	const V3 w2 = midpoint_at<Round, Near4>(t.v0, t.v1);
+	const double fa = (t.e1 + t.e2) - t.e0;
+	const double fb = (t.e0 + t.e2) - t.e1;
+	const double fc = (t.e0 + t.e1) - t.e2;
+	int d = fa < 0 ? 0 : fb < 0 ? 1 : fc < 0 ? 2 : 3;
+	Trixel n{pick(d, t.v0, t.v1, t.v2, w0), pick(d, w2, w0, w1, w1), pick(d, w1, w2, w0, w2), 0, 0, 0};
+	n.e0 = triple<Round>(n.v1, n.v2, c);
+	n.e1 = triple<Round>(n.v2, n.v0, c);
+	n.e2 = triple<Round>(n.v0, n.v1, c);
+	bool ok = n.e0 > 0 && n.e1 > 0 && n.e2 > 0;
+	if constexpr (Certify) {
+		const bool need_a = (d == 1 || d == 2) && !(fa > margin);
+		const bool need_b = d == 2 && !(fb > margin);
+		if (need_a || need_b) [[unlikely]] {
+			if (need_a) {
+				ok = ok && triple<Round>(w1, w2, c) > 0;
+			}
+			if (need_b) {
+				ok = ok && triple<Round>(w2, w0, c) > 0;
+			}
+		}
+	} else {
+		const double ia = triple<Round>(w1, w2, c);
+		const double ib = triple<Round>(w2, w0, c);
+		ok = ok && ((d != 1 && d != 2) || ia > 0) && (d != 2 || ib > 0);
+	}
+	if (!ok) [[unlikely]] {
+		if (inside<Round>(c, t.v0, w2, w1)) {
+			d = 0;
+		} else if (inside<Round>(c, t.v1, w0, w2)) {
+			d = 1;
+		} else if (inside<Round>(c, t.v2, w1, w0)) {
+			d = 2;
+		} else {
+			d = 3;
+		}
+		n.v0 = pick(d, t.v0, t.v1, t.v2, w0);
+		n.v1 = pick(d, w2, w0, w1, w1);
+		n.v2 = pick(d, w1, w2, w0, w2);
+		n.e0 = triple<Round>(n.v1, n.v2, c);
+		n.e1 = triple<Round>(n.v2, n.v0, c);
+		n.e2 = triple<Round>(n.v0, n.v1, c);
+	}
+	id = (id << 2) | static_cast<uint64_t>(d);
+	t = n;
+}
+
+
+// Depths [0, HTM_NEAR4_DEPTH) take std::sqrt, the rest sqrt_near4; depths
+// [HTM_EXACT_DEPTH, HTM_MAX_LEVEL) compute every test they need.
+constexpr int HTM_NEAR4_DEPTH = 14;
+constexpr int HTM_EXACT_DEPTH = 21;
+
+
+template <bool Round>
+HTM_NOFUSE_FN uint64_t descend(const Cartesian& coord) noexcept {
+	HTM_NOFUSE_BODY
+	const V3 c{coord.x, coord.y, coord.z};
+	const auto& start_trixel = HTM::startTrixel(coord);
+	const double scale = std::fmax(std::fabs(c.x), std::fmax(std::fabs(c.y), std::fabs(c.z)));
+	if (!(scale >= 0x1p-500 && scale <= 0x1p500)) {
+		return walk<Round>(c, start_trixel);
+	}
+	const double margin = scale * 0x1p-44;
+	const auto& s0 = start_vertices[start_trixel.v0];
+	const auto& s1 = start_vertices[start_trixel.v1];
+	const auto& s2 = start_vertices[start_trixel.v2];
+	Trixel t{{s0.x, s0.y, s0.z}, {s1.x, s1.y, s1.z}, {s2.x, s2.y, s2.z}, 0, 0, 0};
+	t.e0 = triple<Round>(t.v1, t.v2, c);
+	t.e1 = triple<Round>(t.v2, t.v0, c);
+	t.e2 = triple<Round>(t.v0, t.v1, c);
+	uint64_t id = start_trixel.id;
+	int depth = 0;
+	for (; depth < HTM_NEAR4_DEPTH; ++depth) {
+		step<Round, false, true>(t, id, c, margin);
+	}
+	for (; depth < HTM_EXACT_DEPTH; ++depth) {
+		step<Round, true, true>(t, id, c, margin);
+	}
+	for (; depth < static_cast<int>(HTM_MAX_LEVEL); ++depth) {
+		step<Round, true, false>(t, id, c, margin);
+	}
 	return id;
 }
 
