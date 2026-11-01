@@ -6,7 +6,7 @@
 // 2. The sums of squares of the descent's midpoints (|fl(a + b)|^2 for an edge a-b of
 //    a trixel at depth k): every trixel to depth 10, where their largest distance from
 //    4 shrinks by at least 3.9 per level, and random paths to depth 25, where every one
-//    from depth 14 on lies within 2^24 units of 4.
+//    from depth 15 on lies within 2^24 units of 4.
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -32,7 +32,7 @@ double sqrt_near4(double q) {
 	return from_bits((bits(q) >> 1) + 0x1FF8000000000000ULL);
 }
 
-constexpr int NEAR4_DEPTH = 14;  // htm.cc's HTM_NEAR4_DEPTH
+constexpr int NEAR4_DEPTH = 15;  // htm.cc's HTM_NEAR4_DEPTH
 constexpr int64_t EXACT_RANGE = int64_t(1) << 25;
 
 volatile double sink;

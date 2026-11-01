@@ -722,7 +722,7 @@ HTM_NOFUSE_FN uint64_t walk(const V3& c, const trixel_t& start_trixel) noexcept 
 // RN(sqrt(q)) for q within 2^26 units in the last place of 4: halving the bits of
 // q (exponent and fraction together) is then exact (test/sqrt_test.cc checks every
 // such q). The sums of squares of the midpoints from depth HTM_NEAR4_DEPTH on are
-// within 2^19 units of 4.
+// within 2^23.6 units of 4 (test/sqrt_test.cc).
 inline double sqrt_near4(double q) noexcept {
 	uint64_t b;
 	std::memcpy(&b, &q, sizeof b);
@@ -833,7 +833,7 @@ HTM_NOFUSE_FN inline void step(Trixel& t, uint64_t& id, const V3& c, double marg
 
 // Depths [0, HTM_NEAR4_DEPTH) take std::sqrt, the rest sqrt_near4; depths
 // [HTM_EXACT_DEPTH, HTM_MAX_LEVEL) compute every test they need.
-constexpr int HTM_NEAR4_DEPTH = 14;
+constexpr int HTM_NEAR4_DEPTH = 15;
 constexpr int HTM_EXACT_DEPTH = 21;
 
 
@@ -968,7 +968,15 @@ HTM::getId(const Cartesian& coord)
 std::string
 HTM::getTrixelName(const Cartesian& coord)
 {
-	return getTrixelName(getId(coord));
+	// getTrixelName(getId(coord)) for an id of HTM_MAX_LEVEL: the root's N/S bits at
+	// 53-52, then two bits per digit.
+	const uint64_t id = getId(coord);
+	std::string name(HTM_MAX_LENGTH_NAME, '0');
+	name[0] = (id >> (HTM_BITS_ID - 2)) == 3 ? 'S' : 'N';
+	for (size_t i = 1; i < HTM_MAX_LENGTH_NAME; ++i) {
+		name[i] = static_cast<char>('0' + ((id >> (HTM_BITS_ID - 2 - 2 * i)) & 3));
+	}
+	return name;
 }
 
 
