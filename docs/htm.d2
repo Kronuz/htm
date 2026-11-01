@@ -1,6 +1,8 @@
 # htm: nested spherical triangles; a name prefix is an area, its id range the whole subtree.
-# Render: d2 --layout elk --sketch --theme 302 docs/htm.d2 docs/htm.svg
-vars: { d2-config: { layout-engine: elk; theme-id: 302; sketch: true; pad: 24 } }
+# Render: d2 docs/htm.d2 docs/htm.svg
+vars: { d2-config: { layout-engine: elk; theme-id: 302; sketch: true; pad: 24; theme-overrides: { B1: "#8C7B7E"; B2: "#C25B73"; N2: "#C25B73" } } }
+style.fill: transparent
+
 direction: right
 
 s: "trixel S" {
