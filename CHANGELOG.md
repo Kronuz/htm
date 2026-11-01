@@ -27,7 +27,7 @@ library has no releases.
   `-ffp-contract=fast`) and GCC 16 (default, `-ffp-contract=fast` and
   `-ffp-contract=off`) on arm64, and 0 of 1.9 million under Apple clang 17 (default,
   `-mfma`, `-march=native`) and GCC 16 (default, `-march=native`, with and without
-  `-ffp-contract=off`) on x86-64. Audit H3.
+  `-ffp-contract=off`) on x86-64. Audit H3. (`cf5177b`)
 - A build that fused (Apple clang and GCC on arm64, or x86 with FMA enabled) returned
   other ids for the points above. An index written by such a build files a point
   within rounding of a cell edge in the neighbouring cell; the points to reindex are
@@ -72,7 +72,7 @@ of products 739 ns and 909 ns; the scalar barrier stays.
 ### Changed
 
 - The CMake build pins cartesian at `49f4075`, the commit with the `std::hash<Cartesian>`
-  equality fix. htm does not hash `Cartesian` values.
+  equality fix. htm does not hash `Cartesian` values. (`cf99efe`)
 - `test/diff_test.cc` runs 200,000 random points by default, down from 2,000,000, because
   each point now also runs the volatile reference.
 
