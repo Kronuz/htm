@@ -124,10 +124,13 @@ ways; the trixel naming, id, range, and set-operation results match upstream:
 - **Vector descent.** `getId(Cartesian)` descends on a plain three-double vector,
   and `getTrixelName(Cartesian)` derives the name from the id (see
   `ARCHITECTURE.md`). `getId` is IEEE-754 double arithmetic with every product
-  rounded on its own (`HTM_MUL` in `htm.cc`), whatever the compiler's contraction
-  mode; do not add an arithmetic expression to the descent without wrapping its
-  products in `HTM_MUL`. `test/ieee.h` is the reference, `test/golden.h` the table of
-  ids, and CTest `htm_fma` runs the same test against a build with
-  `-ffp-contract=fast` (and `-mfma` on x86).
+  rounded on its own, whatever the compiler's contraction mode: `htm.cc` keeps the
+  descent in a plain form (compiler told not to contract) and a rounded form (`asm`
+  barrier), and a first-call probe against 48 ids picks the plain form only if it is
+  exact. Keep both forms and the probe table (`probes` in `htm.cc`) together; do not
+  add an arithmetic expression to the descent outside `HTM_MUL`. `test/ieee.h` is the
+  reference, `test/golden.h` the table of ids, and CTest `htm_fma` and `htm_rounded`
+  run the same test against builds with `-ffp-contract=fast` (and `-mfma` on x86),
+  the second with the rounded form forced (`HTM_FORCE_ROUNDED`).
 
 Keep these reconcilable with upstream as plain edits.

@@ -75,6 +75,18 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_executable(htm_fma_test test/diff_test.cc)
     target_link_libraries(htm_fma_test PRIVATE htm_fma)
     add_test(NAME htm_fma COMMAND htm_fma_test)
+
+    # The same, with getId forced onto the form that rounds each product behind an
+    # asm: the form it falls back to when a compiler fuses despite the pragma.
+    add_library(htm_rounded STATIC htm.cc constraint.cc)
+    target_include_directories(htm_rounded PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_compile_features(htm_rounded PUBLIC cxx_std_20)
+    target_compile_options(htm_rounded PRIVATE ${HTM_FMA_FLAGS})
+    target_compile_definitions(htm_rounded PRIVATE HTM_FORCE_ROUNDED)
+    target_link_libraries(htm_rounded PUBLIC cartesian::cartesian)
+    add_executable(htm_rounded_test test/diff_test.cc)
+    target_link_libraries(htm_rounded_test PRIVATE htm_rounded)
+    add_test(NAME htm_rounded COMMAND htm_rounded_test)
   endif()
 
   # Benchmark against the frozen original (not part of ctest).

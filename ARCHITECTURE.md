@@ -56,13 +56,20 @@ A compiler may contract `a * b + c` into one fused multiply-add, which rounds on
 It does so by default in GCC and in clang's `-ffp-contract=fast`, and clang does it
 within one expression on any CPU with FMA. A point within rounding of a trixel edge
 then lands in another trixel, and ids are stored in indexes, so an id must not
-depend on the build. `HTM_MUL` in `htm.cc` rounds each product behind an empty `asm`
-the optimizer cannot see through, so there is nothing to fuse and every build
-returns the same id. That holds for `-ffp-contract=fast` and for FMA targets. An
-x86 target without FMA has no instruction to fuse into, so `HTM_MUL` is a plain
-multiply there and the compiler keeps its freedom to vectorize. The barrier does
-not hold under `-ffast-math`, which may reassociate the sums: do not compile
-`htm.cc` with it.
+depend on the build.
+
+Where the CPU has no fused multiply-add (x86-64 without FMA), nothing can fuse and
+`htm.cc` uses the plain expressions. Elsewhere `htm.cc` holds the descent twice, as
+`descend<false>` and `descend<true>`. The plain form tells the compiler not to
+contract: clang's `fp contract(off)` pragma, GCC's `optimize("-ffp-contract=off")`
+attribute, MSVC's `fp_contract` pragma. Clang ignores its pragma under an explicit
+`-ffp-contract=fast`, and another compiler or version may not honor its control, so
+the first call to `getId` runs the plain form on 48 points whose ids a fusing build
+gets wrong, and uses it only if every id matches. Otherwise `getId` uses the form
+whose products are rounded by `rounded_mul`, an empty `asm` the optimizer cannot see
+through, which leaves nothing to fuse and costs about a quarter of the speed. Either
+way every build returns the same id. Neither form holds under `-ffast-math`, which
+may reassociate the sums: do not compile `htm.cc` with it.
 
 The ids are the ones a build without contraction computes: x86-64 without FMA, or
 any build with `-ffp-contract=off`. Only `getId(Cartesian)` is covered. The corner

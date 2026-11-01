@@ -20,14 +20,19 @@ library has no releases.
   points on trixel edges (2.79 million points, Apple clang 17 on arm64; it also
   differs under Apple clang and GCC 16 with `-march=native` on x86-64). The
   differential test could not see it because its reference was built with the same
-  flags in the same run. `HTM_MUL` rounds each product behind an empty `asm`, so
-  nothing is left to fuse; an x86 target without FMA has no instruction to fuse into
-  and compiles the plain product. The ids are now those of a build without
-  contraction: 0 of the 2.79 million points differ under Apple clang 17 (default and
-  `-ffp-contract=fast`) and GCC 16 (default, `-ffp-contract=fast` and
-  `-ffp-contract=off`) on arm64, and 0 of 1.9 million under Apple clang 17 (default,
-  `-mfma`, `-march=native`) and GCC 16 (default, `-march=native`, with and without
-  `-ffp-contract=off`) on x86-64. Audit H3. (`cf5177b`)
+  flags in the same run. The descent now tells the compiler not to contract (clang's
+  `fp contract(off)` pragma, GCC's `optimize` attribute, MSVC's `fp_contract` pragma);
+  an x86 target without FMA has no instruction to fuse into and keeps the plain
+  expressions. Clang ignores its pragma under an explicit `-ffp-contract=fast`, so the
+  first call to `getId` runs the plain form on 48 points whose ids a fusing build gets
+  wrong and, if any differs, uses a second form that rounds each product behind an
+  empty `asm`. The ids are now those of a build without contraction: 0 of the 2.79
+  million points differ under Apple clang 17 (default, `-ffp-contract=on`,
+  `-ffp-contract=fast`), Homebrew clang 23 (`fast`) and GCC 16 (default,
+  `-ffp-contract=fast`, `-ffp-contract=off`) on arm64, and 0 of 1.9 million under
+  Apple clang 17 (default, `-mfma`, `-march=native`, `-march=native` with the default
+  contraction) and GCC 16 (default, `-march=native`, with `-ffp-contract=fast` and with
+  `-ffp-contract=off`) on x86-64. Audit H3. (`cf5177b`, `HEAD_SHA`)
 - A build that fused (Apple clang and GCC on arm64, or x86 with FMA enabled) returned
   other ids for the points above. An index written by such a build files a point
   within rounding of a cell edge in the neighbouring cell; the points to reindex are
@@ -38,25 +43,25 @@ library has no releases.
 
 `htm_bench`, ns per call, five interleaved runs, Apple clang 17, `-O3`. The fused
 descent was faster because it did less work; the new one does the work the ids
-require.
+require, at the speed of the same code built with `-ffp-contract=off` (592 ns on
+arm64, 879 on x86 with FMA).
 
 | row | build | before | after |
 |---|---|---|---|
-| `getId(Cartesian)` | arm64 (M4 Pro) | 561 | 738 |
-| `getTrixelName(Cartesian)` | arm64 (M4 Pro) | 633 | 808 |
-| `getId(Cartesian)` | x86-64 default (i9-9980HK) | 803 | 801 |
-| `getTrixelName(Cartesian)` | x86-64 default | 974 | 968 |
-| `getId(Cartesian)` | x86-64, `-march=haswell` | 806 | 928 |
-| `getTrixelName(Cartesian)` | x86-64, `-march=haswell` | 954 | 1066 |
+| `getId(Cartesian)` | arm64 (M4 Pro) | 559 | 593 |
+| `getTrixelName(Cartesian)` | arm64 (M4 Pro) | 630 | 667 |
+| `getId(Cartesian)` | x86-64 default (i9-9980HK) | 807 | 828 |
+| `getTrixelName(Cartesian)` | x86-64 default | 969 | 982 |
+| `getId(Cartesian)` | x86-64, `-march=haswell` | 798 | 873 |
+| `getTrixelName(Cartesian)` | x86-64, `-march=haswell` | 945 | 1037 |
 | `getTrixelName(id)` | arm64, x86-64 | unchanged | unchanged |
 
-The reference walk of the start (`frozen` in the bench) takes 913 ns on arm64, so
-`getId` is 1.24x faster than the start there, down from 1.63x. The same descent
-built without contraction and without the barrier takes 592 ns on arm64, so the
-fusing accounts for 5% and the barrier for the rest: it keeps the compiler from
-vectorizing the cross products. A `*one` multiply with an opaque 1.0 instead of the
-barrier measured 695 ns on arm64 and 1012 ns on x86 with FMA, and one barrier per group
-of products 739 ns and 909 ns; the scalar barrier stays.
+The reference walk of the start (`frozen` in the bench) takes 914 ns on arm64, so
+`getId` is 1.54x faster than the start there, down from 1.63x. The first version of
+the fix rounded each product behind an `asm` on every build and took 734 ns on arm64
+and 901 ns on x86 with FMA; that form is now the fallback. A `*one` multiply with an
+opaque 1.0 instead of the `asm` measured 695 ns on arm64 and 1012 ns on x86 with FMA,
+and one `asm` per group of products 739 ns and 909 ns.
 
 ### Added
 
@@ -67,7 +72,8 @@ of products 739 ns and 909 ns; the scalar barrier stays.
   `getId` against both and against the `Cartesian`-object walk, and counts the points
   where the walk differs because the build's own `Cartesian` operators fuse.
 - CTest `htm_fma` runs `htm_diff` against a second build of `htm.cc` with
-  `-ffp-contract=fast` (and `-mfma` on x86 when the build machine runs it).
+  `-ffp-contract=fast` (and `-mfma` on x86 when the build machine runs it), and
+  `htm_rounded` runs it with the rounded form of `getId` forced (`HTM_FORCE_ROUNDED`).
 
 ### Changed
 
