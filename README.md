@@ -83,22 +83,50 @@ Not for:
 
 ## ⚡ Performance
 
-ns per call on random unit vectors, five interleaved runs, Apple clang 17 with `-O3` and
-default target flags:
+ns to name one point. `getId(Cartesian)` returns the 64-bit id of the level-25 trixel
+(`HTM_MAX_LEVEL`, an edge of about 0.3 m, an area of 0.057 m²) that contains a unit vector;
+`getTrixelName(Cartesian)` returns its 27-character name. The input is 20,000 random unit
+vectors, uniform on the sphere, converted to each library's input type before timing, so a
+row times the library call alone. Each value is the best of ten rounds (two runs of five
+interleaved rounds). The columns:
 
-| call | Apple M4 Pro | Intel Core i9-9980HK |
-| --- | ---: | ---: |
-| `getId(Cartesian)` | 593 | 828 |
-| `getTrixelName(Cartesian)` | 667 | 982 |
+- `htm` is this library.
+- `SDSS HTM` is the Johns Hopkins C++ library of Kunszt, Szalay and Thakar
+  ([vendored by gkhtm](https://github.com/genghisken/gkhtm/tree/e319c997a98019302428ca5667b288ee9c869deb)),
+  `SpatialIndex::idByPoint` and `nameByPoint` at level 25. It numbers the same eight root
+  trixels and the same children, so the bench aborts unless its names equal htm's down to
+  level 14 on every input. All 25 levels agree on 53% of the inputs: SDSS decides with a
+  fixed tolerance of 1e-15 and picks a neighbouring trixel at the finest levels. Its ids
+  differ from htm's in one bit.
+- `H3` is [H3 4.5.0](https://github.com/uber/h3/tree/v4.5.0), `latLngToCell` at resolution 15,
+  and `S2` is [Google S2](https://github.com/google/s2geometry/tree/677c8cebcff11ba11accc0b02005bc214e06e9fd),
+  `S2CellId` at level 25. They are other meshes with ids of their own, so the table has
+  no `getTrixelName` for them (`-`). The levels match cell areas: S2 level 25 is 0.076 m²,
+  H3 resolution 15, its finest, is 0.90 m², sixteen times an htm trixel. The bench checks
+  that each cell centre lies within 1 m of its point.
+- The last column is the SDSS time divided by the htm time.
 
-The bench also times the reference `Cartesian`-object walk (`test/frozen.h`), which takes
-914 ns per `getId` on the M4 Pro. Run it with:
+| ns per call | htm | SDSS HTM | H3 | S2 | htm vs SDSS HTM |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `getId`, Apple M4 Pro | 591 | 962 | 497 | 19.8 | 1.63x faster |
+| `getId`, Intel Core i9-9980HK | 795 | 1517 | 755 | 36.2 | 1.91x faster |
+| `getTrixelName`, Apple M4 Pro | 662 | 962 | - | - | 1.45x faster |
+| `getTrixelName`, Intel Core i9-9980HK | 962 | 1542 | - | - | 1.60x faster |
+
+H3 and S2 are faster than htm on `getId`: H3 by 1.2x on the M4 Pro and 1.05x on the i9, S2 by
+30x and 22x. S2 projects the point onto a cube face and looks the cell up, and htm descends 25
+levels. Machines: Apple M4 Pro, macOS 26; Intel Core i9-9980HK, macOS 15 (x86-64); Apple clang
+17, `-O3 -DNDEBUG` for every library. The comparators are fetched at configure time by the
+bench target alone and are off by default:
 
 ```sh
-cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DHTM_BENCH_COMPARE=ON -DHTM_BENCH_S2=ON
 cmake --build build --target htm_bench
 ./build/htm_bench
 ```
+
+`HTM_BENCH_S2` needs abseil installed (Homebrew `abseil`). [docs/perf/](docs/perf/README.md)
+has the method, every row with its spread and the SDSS comparison.
 
 ## 📚 Documentation
 

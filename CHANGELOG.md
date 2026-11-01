@@ -6,8 +6,21 @@ library has no releases.
 
 ## 2026-11-01
 
+### Added
+
+- `htm_bench` times three libraries on the same random unit vectors, off by default and
+  fetched at pinned versions by the bench target alone: `-DHTM_BENCH_COMPARE=ON` adds the
+  SDSS HTM library (`idByPoint`, `nameByPoint`; the same mesh) and H3 (`latLngToCell`),
+  `-DHTM_BENCH_S2=ON` adds Google S2 (`S2CellId`). The bench aborts when htm and SDSS name
+  different trixels within the first 14 levels of any point. Method and every row are in
+  `docs/perf/README.md`.
+
 ### Changed
 
+- `htm_bench` no longer times `test/frozen.h`, the `Cartesian`-object walk that
+  `htm_diff` uses as a reference (914 ns per `getId` on the M4 Pro when the README quoted
+  it; see 2026-10-31). Its rounds are interleaved, with an A/A row and the best, median and
+  worst of each row.
 - The README follows the family README standard: the description as its first sentence,
   Quick start before Installation, a pinned FetchContent tag, "Not for" limits, and the
   current `htm_bench` numbers. The diagram draws nested trixels in place of a 2186 x 450

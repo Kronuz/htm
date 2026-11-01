@@ -89,9 +89,74 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_test(NAME htm_rounded COMMAND htm_rounded_test)
   endif()
 
-  # Benchmark against the frozen original (not part of ctest).
+  # Benchmark (not part of ctest). With HTM_BENCH_COMPARE it also times the SDSS HTM
+  # library (the C++ library of Kunszt, Szalay and Thakar, which names the same
+  # trixels) and H3, fetched at pinned versions and built with the same compiler and
+  # flags; with HTM_BENCH_S2 it also times Google S2, which needs abseil and OpenSSL
+  # installed. None of them is a dependency of the htm target.
+  option(HTM_BENCH_COMPARE "Time the SDSS HTM library and H3 in htm_bench" OFF)
+  option(HTM_BENCH_S2 "Time Google S2 in htm_bench (needs abseil and OpenSSL)" OFF)
   add_executable(htm_bench bench/bench.cc)
   target_link_libraries(htm_bench PRIVATE htm)
+
+  if(HTM_BENCH_COMPARE)
+    # SDSS HTM sources as vendored by gkhtm, pinned to a commit. The sources carry the
+    # Johns Hopkins University copyright header; they are fetched for the bench and not
+    # redistributed. gEpsilon (1e-15) in SpatialGeneral.h is their tolerance, unchanged.
+    FetchContent_Declare(
+      sdss_htm
+      GIT_REPOSITORY https://github.com/genghisken/gkhtm.git
+      GIT_TAG        e319c997a98019302428ca5667b288ee9c869deb
+    )
+    FetchContent_MakeAvailable(sdss_htm)
+    set(SDSS_DIR "${sdss_htm_SOURCE_DIR}/gkhtm/htm")
+    add_library(sdss_htm STATIC
+      "${SDSS_DIR}/src/SpatialIndex.cpp"
+      "${SDSS_DIR}/src/SpatialVector.cpp"
+      "${SDSS_DIR}/src/SpatialEdge.cpp"
+      "${SDSS_DIR}/src/SpatialException.cpp")
+    target_include_directories(sdss_htm PUBLIC "${SDSS_DIR}/include")
+    target_compile_definitions(sdss_htm PUBLIC LINKAGE=)
+    target_compile_options(sdss_htm PRIVATE -w)
+
+    # H3 v4.5.0, a C library (the bench target needs C enabled to inherit its C standard).
+    enable_language(C)
+    set(BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+    set(BUILD_FUZZERS OFF CACHE BOOL "" FORCE)
+    set(BUILD_FILTERS OFF CACHE BOOL "" FORCE)
+    set(BUILD_GENERATORS OFF CACHE BOOL "" FORCE)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(ENABLE_FORMAT OFF CACHE BOOL "" FORCE)
+    set(ENABLE_LINTING OFF CACHE BOOL "" FORCE)
+    set(ENABLE_DOCS OFF CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(
+      h3
+      GIT_REPOSITORY https://github.com/uber/h3.git
+      GIT_TAG        v4.5.0
+    )
+    FetchContent_MakeAvailable(h3)
+
+    target_link_libraries(htm_bench PRIVATE sdss_htm h3)
+    target_compile_definitions(htm_bench PRIVATE HTM_BENCH_SDSS HTM_BENCH_H3)
+  endif()
+
+  if(HTM_BENCH_S2)
+    # Google S2 at a commit after v0.14.0 (the release does not build against abseil 20260817),
+    # on the installed abseil, built as C++20 like the bench.
+    set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    set(CMAKE_CXX_STANDARD 20 CACHE STRING "" FORCE)
+    FetchContent_Declare(
+      s2geometry
+      GIT_REPOSITORY https://github.com/google/s2geometry.git
+      GIT_TAG        677c8cebcff11ba11accc0b02005bc214e06e9fd
+    )
+    FetchContent_MakeAvailable(s2geometry)
+    target_link_libraries(htm_bench PRIVATE s2)
+    target_compile_definitions(htm_bench PRIVATE HTM_BENCH_S2)
+  endif()
 
   # A runnable tour of the library (not a test): build & run ./build/htm_demo
   add_executable(htm_demo examples/demo.cc)
