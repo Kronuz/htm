@@ -32,7 +32,7 @@ library has no releases.
   `-ffp-contract=fast`, `-ffp-contract=off`) on arm64, and 0 of 1.9 million under
   Apple clang 17 (default, `-mfma`, `-march=native`, `-march=native` with the default
   contraction) and GCC 16 (default, `-march=native`, with `-ffp-contract=fast` and with
-  `-ffp-contract=off`) on x86-64. Audit H3. (`cf5177b`, `HEAD_SHA`)
+  `-ffp-contract=off`) on x86-64. Audit H3. (`cf5177b`, `9006a84`)
 - A build that fused (Apple clang and GCC on arm64, or x86 with FMA enabled) returned
   other ids for the points above. An index written by such a build files a point
   within rounding of a cell edge in the neighbouring cell; the points to reindex are
