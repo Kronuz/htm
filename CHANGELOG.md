@@ -4,6 +4,15 @@ Notable changes to htm, newest first. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); entries are dated because the
 library has no releases.
 
+## 2026-11-01
+
+### Changed
+
+- The README follows the family README standard: the description as its first sentence,
+  Quick start before Installation, a pinned FetchContent tag, "Not for" limits, and the
+  current `htm_bench` numbers. The diagram draws nested trixels in place of a 2186 x 450
+  chain of names; it renders at 863 x 500.
+
 ## 2026-10-31
 
 ### Fixed

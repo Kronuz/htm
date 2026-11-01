@@ -1,19 +1,22 @@
-# htm: nested spherical triangles; a name prefix is an area, an id range its subtree.
+# htm: nested spherical triangles; a name prefix is an area, its id range the whole subtree.
 # Render: d2 --layout elk --sketch --theme 302 docs/htm.d2 docs/htm.svg
+vars: { d2-config: { layout-engine: elk; theme-id: 302; sketch: true; pad: 24 } }
 direction: right
 
-point: point {
-  label: "Sydney\n−33.87°, 151.21°"
+s: "trixel S" {
+  label.near: top-left
+  s1: "trixel S1" {
+    label.near: top-left
+    s13: "trixel S13" {
+      label.near: top-left
+      leaf: "Sydney's trixel\nS1301…301131" {
+        width: 220
+        height: 150
+      }
+    }
+  }
 }
-levels: trixel name {
-  s: "S"
-  s1: "S1"
-  s13: "S13"
-  leaf: "S1301…301131"
-  s -> s1 -> s13 -> leaf: "+1 digit per level"
-}
-range: id range {
-  label: "getRange(\"S13\")\n[start, end] covers\nevery descendant"
-}
-point -> levels.leaf: "getTrixelName()"
-levels.s13 -> range
+
+range: "getRange(\"S13\")\nids [start, end]\nof every descendant"
+
+s.s1.s13 -> range
