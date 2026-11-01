@@ -12,7 +12,7 @@ include(FetchContent)
 FetchContent_Declare(
   cartesian
   GIT_REPOSITORY https://github.com/Kronuz/cartesian.git
-  GIT_TAG        49f4075854815d07db2d8b1661b017dc53ebaeca
+  GIT_TAG        e60debdfda0481a69ea3732da0cae7ec8fa80591
 )
 FetchContent_MakeAvailable(cartesian)
 
