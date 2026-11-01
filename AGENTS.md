@@ -13,6 +13,8 @@ htm.cc           Naming descent, id packing, range conversion, set algebra, Cons
 constraint.h     The Constraint spherical-cap class + earth-radius constants. From Xapiand src/geospatial/geometry.h (Constraint only).
 constraint.cc    Constraint::set_data + comparison operators. From Xapiand src/geospatial/geometry.cc (Constraint only).
 test/test.cc     Runnable smoke test: naming/id, lat/lon points, round trip, getCorners, getRange, set ops, Constraint + ranging helpers.
+test/diff_test.cc  getId/getTrixelName against test/ieee.h (IEEE-754 reference), test/golden.h (ids) and test/frozen.h (the Cartesian-object walk). CTest `htm_diff` and `htm_fma`.
+test/gen_golden.cc  Regenerates test/golden.h (not built).
 examples/demo.cc A runnable tour (not a test).
 CMakeLists.txt   STATIC library `htm` (+ alias htm::htm); FetchContent cartesian; CTest test `htm`.
 LICENSE          MIT, Copyright (c) 2015-2019 Dubalu LLC.
@@ -32,8 +34,8 @@ that links `cartesian` so `"cartesian.h"` resolves.
 cmake -B build && cmake --build build && ctest --test-dir build
 ```
 
-The first configure fetches `cartesian` over the network (FetchContent,
-`GIT_TAG main`). Expected output ends with `all htm tests passed`, exit 0. The
+The first configure fetches `cartesian` over the network (FetchContent, at the
+commit `CMakeLists.txt` pins). Expected output ends with `all htm tests passed`, exit 0. The
 test target is `htm_test`; the registered CTest name is `htm`. The test and demo
 are only added when this repo is the top-level project (CMakeLists.txt), so
 consumers vendoring it via `FetchContent` won't build them.
@@ -44,7 +46,8 @@ consumers vendoring it via `FetchContent` won't build them.
 the `PI_HALF` / `DBL_TOLERANCE` constants. That header lives in the sibling
 [cartesian](https://github.com/Kronuz/cartesian) library, pulled in by CMake and
 linked `PUBLIC` (Cartesian appears in the public interface, so consumers need it
-too). We track its tip with `GIT_TAG main`, like the rest of the family. This is
+too). It is pinned to a commit in `CMakeLists.txt`; move the pin when cartesian
+changes something htm relies on. This is
 the library's only dependency.
 
 ## Conventions
@@ -120,7 +123,11 @@ ways; the trixel naming, id, range, and set-operation results match upstream:
   `"strings.hh"` include.
 - **Vector descent.** `getId(Cartesian)` descends on a plain three-double vector,
   and `getTrixelName(Cartesian)` derives the name from the id (see
-  `ARCHITECTURE.md`). `test/diff_test.cc` holds the ids bit-identical to the
-  `Cartesian`-object walk in `test/frozen.h`.
+  `ARCHITECTURE.md`). `getId` is IEEE-754 double arithmetic with every product
+  rounded on its own (`HTM_MUL` in `htm.cc`), whatever the compiler's contraction
+  mode; do not add an arithmetic expression to the descent without wrapping its
+  products in `HTM_MUL`. `test/ieee.h` is the reference, `test/golden.h` the table of
+  ids, and CTest `htm_fma` runs the same test against a build with
+  `-ffp-contract=fast` (and `-mfma` on x86).
 
 Keep these reconcilable with upstream as plain edits.

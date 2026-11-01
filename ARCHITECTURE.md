@@ -48,9 +48,27 @@ sign-of-cross-products test) decides which of the four children contains the poi
 `getTrixelName(coord)` is `getTrixelName(getId(coord))`.
 
 The descent runs on a plain three-double vector, not on `Cartesian` objects (which
-carry a scale and an SRID). Each operation repeats the exact floating-point
-expression of `Cartesian`'s `+`, `^`, `*`, and `normalize()` in the same order, so
-the ids are bit-identical to an object-based walk.
+carry a scale and an SRID). Each operation repeats the expression of `Cartesian`'s
+`+`, `^`, `*`, and `normalize()` in the same order, in plain IEEE-754 double
+arithmetic: every product is rounded before it is added or subtracted.
+
+A compiler may contract `a * b + c` into one fused multiply-add, which rounds once.
+It does so by default in GCC and in clang's `-ffp-contract=fast`, and clang does it
+within one expression on any CPU with FMA. A point within rounding of a trixel edge
+then lands in another trixel, and ids are stored in indexes, so an id must not
+depend on the build. `HTM_MUL` in `htm.cc` rounds each product behind an empty `asm`
+the optimizer cannot see through, so there is nothing to fuse and every build
+returns the same id. That holds for `-ffp-contract=fast` and for FMA targets. An
+x86 target without FMA has no instruction to fuse into, so `HTM_MUL` is a plain
+multiply there and the compiler keeps its freedom to vectorize. The barrier does
+not hold under `-ffast-math`, which may reassociate the sums: do not compile
+`htm.cc` with it.
+
+The ids are the ones a build without contraction computes: x86-64 without FMA, or
+any build with `-ffp-contract=off`. Only `getId(Cartesian)` is covered. The corner
+and constraint geometry (`getCorners`, `Constraint`, the range search) runs on
+`Cartesian` objects and follows the compiler's contraction mode; it sets which
+ranges a query covers, never which id a point receives.
 
 `getCorners(name)` replays the descent from the digits instead of from a point,
 returning the three vertices of the named trixel. A digit outside `0..3` past the

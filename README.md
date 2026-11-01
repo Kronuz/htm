@@ -86,9 +86,12 @@ cmake -B build && cmake --build build && ctest --test-dir build
 ./build/htm_bench [points]   # getId and getTrixelName against the reference test/frozen.h
 ```
 
-`test/diff_test.cc` (CTest `htm_diff`) checks that `getId` and `getTrixelName`
-return exactly what the reference `Cartesian`-object implementation returns, on
-random points, poles, signed zeros, axis planes, and trixel vertices and midpoints.
+`test/diff_test.cc` (CTest `htm_diff`) checks `getId` and `getTrixelName` on random
+points, poles, signed zeros, axis planes, and trixel vertices and midpoints against
+an IEEE-754 reference (`test/ieee.h`), a table of golden ids (`test/golden.h`), and
+the original `Cartesian`-object walk (`test/frozen.h`). CTest `htm_fma` runs the same
+test on a build of `htm.cc` with `-ffp-contract=fast` (and `-mfma` on x86): the ids
+are the same on every build, whether or not the compiler fuses multiply-adds.
 
 ## 🤝 Contributing
 

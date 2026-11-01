@@ -560,10 +560,41 @@ HTM::simplifyRanges(std::vector<range_t>& ranges)
 
 namespace {
 
-// Plain 3-vector for the hot descent. Every operation repeats the exact
-// floating-point expression of the matching Cartesian operator (operator+,
-// operator^, operator*, normalize()), in the same order, so that the ids are
-// bit-identical to the ones computed with Cartesian objects.
+// Plain 3-vector for the hot descent. Every operation repeats the floating-point
+// expression of the matching Cartesian operator (operator+, operator^, operator*,
+// normalize()), in the same order.
+//
+// The arithmetic is plain IEEE-754 double: every product is rounded before it is
+// added or subtracted. A compiler that contracts a * b + c into one fused
+// multiply-add (the default for GCC and for clang's -ffp-contract=fast, and for
+// clang within one expression on any CPU with FMA) rounds once instead of twice,
+// and a point within rounding of a trixel edge then lands in another trixel. Ids
+// are stored in indexes, so they must not depend on that choice: HTM_MUL rounds its
+// product behind an empty asm that the optimizer cannot see through, which
+// leaves nothing to fuse. An x86 target without FMA has no instruction to fuse
+// into: HTM_MUL is the plain product there, written in place so the compiler sees
+// the same expressions as without it and keeps its freedom to vectorize.
+#if defined(__SSE2_MATH__) && (defined(__x86_64__) || defined(__i386__)) && !defined(__FMA__) && !defined(__FMA4__)
+#define HTM_MUL(a, b) ((a) * (b))
+#else
+inline double rounded_mul(double a, double b) noexcept {
+	double p = a * b;
+#if (defined(__GNUC__) || defined(__clang__)) && defined(__aarch64__)
+	__asm__("" : "+w"(p));
+#elif (defined(__GNUC__) || defined(__clang__)) && defined(__SSE2_MATH__)
+	__asm__("" : "+x"(p));
+#elif defined(__GNUC__) || defined(__clang__)
+	__asm__("" : "+m"(p));
+#else
+	volatile double t = p;
+	p = t;
+#endif
+	return p;
+}
+#define HTM_MUL(a, b) rounded_mul(a, b)
+#endif
+
+
 struct V3 {
 	double x, y, z;
 };
@@ -571,23 +602,25 @@ struct V3 {
 
 inline V3 midpoint(const V3& a, const V3& b) noexcept {
 	V3 w{a.x + b.x, a.y + b.y, a.z + b.z};
-	double n = std::sqrt(w.x * w.x + w.y * w.y + w.z * w.z);
+	double n = std::sqrt(HTM_MUL(w.x, w.x) + HTM_MUL(w.y, w.y) + HTM_MUL(w.z, w.z));
 	return {w.x / n, w.y / n, w.z / n};
 }
 
 
 // (a ^ b) * c > 0, as in HTM::insideVertex_Trixel's building block.
 inline double triple(const V3& a, const V3& b, const V3& c) noexcept {
-	double cx = a.y * b.z - b.y * a.z;
-	double cy = a.z * b.x - b.z * a.x;
-	double cz = a.x * b.y - b.x * a.y;
-	return cx * c.x + cy * c.y + cz * c.z;
+	double cx = HTM_MUL(a.y, b.z) - HTM_MUL(b.y, a.z);
+	double cy = HTM_MUL(a.z, b.x) - HTM_MUL(b.z, a.x);
+	double cz = HTM_MUL(a.x, b.y) - HTM_MUL(b.x, a.y);
+	return HTM_MUL(cx, c.x) + HTM_MUL(cy, c.y) + HTM_MUL(cz, c.z);
 }
 
 
 inline bool inside(const V3& v, const V3& v0, const V3& v1, const V3& v2) noexcept {
 	return triple(v0, v1, v) > 0 && triple(v1, v2, v) > 0 && triple(v2, v0, v) > 0;
 }
+
+#undef HTM_MUL
 
 }  // namespace
 

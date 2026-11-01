@@ -39,11 +39,42 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   target_link_libraries(htm_test PRIVATE htm)
   add_test(NAME htm COMMAND htm_test)
 
-  # Differential test of getId/getTrixelName against a frozen copy of the
-  # original Cartesian-object implementation.
+  # Differential test of getId/getTrixelName against the IEEE-754 reference
+  # (test/ieee.h), the golden ids, and a frozen copy of the original
+  # Cartesian-object implementation.
   add_executable(htm_diff_test test/diff_test.cc)
   target_link_libraries(htm_diff_test PRIVATE htm)
   add_test(NAME htm_diff COMMAND htm_diff_test)
+
+  # The ids must not depend on the compiler's floating-point contraction. The
+  # same test runs against a second build of htm.cc with contraction allowed
+  # everywhere (-ffp-contract=fast, and -mfma on x86 when this machine runs it),
+  # which is where a fused multiply-add can change an id.
+  include(CheckCXXCompilerFlag)
+  include(CheckCXXSourceRuns)
+  check_cxx_compiler_flag(-ffp-contract=fast HTM_HAVE_FP_CONTRACT_FAST)
+  if(HTM_HAVE_FP_CONTRACT_FAST)
+    set(HTM_FMA_FLAGS -ffp-contract=fast)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
+      set(CMAKE_REQUIRED_FLAGS "-mfma")
+      check_cxx_source_runs("
+        #include <cmath>
+        int main(int argc, char**) { volatile double a = 1.0 + argc; return std::fma(a, a, a) == 6.0 ? 0 : 1; }
+      " HTM_HAVE_FMA)
+      unset(CMAKE_REQUIRED_FLAGS)
+      if(HTM_HAVE_FMA)
+        list(APPEND HTM_FMA_FLAGS -mfma)
+      endif()
+    endif()
+    add_library(htm_fma STATIC htm.cc constraint.cc)
+    target_include_directories(htm_fma PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+    target_compile_features(htm_fma PUBLIC cxx_std_20)
+    target_compile_options(htm_fma PRIVATE ${HTM_FMA_FLAGS})
+    target_link_libraries(htm_fma PUBLIC cartesian::cartesian)
+    add_executable(htm_fma_test test/diff_test.cc)
+    target_link_libraries(htm_fma_test PRIVATE htm_fma)
+    add_test(NAME htm_fma COMMAND htm_fma_test)
+  endif()
 
   # Benchmark against the frozen original (not part of ctest).
   add_executable(htm_bench bench/bench.cc)
