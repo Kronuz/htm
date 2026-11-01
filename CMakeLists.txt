@@ -6,12 +6,13 @@ include(FetchContent)
 # --- Dependency: cartesian ---
 # htm.h and constraint.h include "cartesian.h" for the Cartesian type (and the
 # PI_HALF / DBL_TOLERANCE constants). That header lives in the sibling cartesian
-# library, pulled in here so the include resolves. We track its tip with
-# GIT_TAG main, like the rest of the family.
+# library, pulled in here so the include resolves. It is pinned to a commit so
+# that builds are reproducible; the commit is the cartesian tip after the
+# std::hash<Cartesian> equality fix.
 FetchContent_Declare(
   cartesian
   GIT_REPOSITORY https://github.com/Kronuz/cartesian.git
-  GIT_TAG        79ed663bf7b6c2481a314070dd84bc18e5ef7df8
+  GIT_TAG        49f4075854815d07db2d8b1661b017dc53ebaeca
 )
 FetchContent_MakeAvailable(cartesian)
 
