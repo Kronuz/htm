@@ -130,6 +130,8 @@ has the method, every row with its spread and the SDSS comparison.
 
 ## 📚 Documentation
 
+- [The Planet as a Prefix](https://kronuz.github.io/blog/htm/):
+  the Familiars post on why it exists and how it works.
 - [docs/API.md](docs/API.md): naming, ranges, set algebra and constraints, with examples.
 - [ARCHITECTURE.md](ARCHITECTURE.md): the subdivision, the id encoding and the range math.
 - [CHANGELOG.md](CHANGELOG.md): dated changes, with the measurements behind each one.
