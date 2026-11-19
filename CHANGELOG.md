@@ -15,39 +15,43 @@ Upgrading a pin from before 2026-10-30: [the consumer upgrade note](https://gith
   - The descent tested children 0..2 with open triangles (`> 0`), so a point exactly
     on an edge of the root mesh (the equator, the meridians 0, 90, 180 and 270, the
     poles) belonged to none of them and fell to child 3 at every level: an
-    `N3333...`-style id up to 6,090 km away, which a circle around the point missed.
+    `N3333...`-style id thousands of km away, which a circle around the point missed.
   - The children's midpoints are rounded, so their edges miss the parent's edges by
     rounding and leave slivers of a trixel in no child. A point in a sliver fell to
-    child 3, which does not hold it either: 4,215 of 1,000,000 random points, from
-    level 20 down, up to 7.74 m outside their trixel; and, on the root-mesh edges, a
-    point near a deeper vertex (latitude 0 at longitude 22.5, for one), up to 1,850 km.
-    Of 655,340 points on the root-mesh edges at longitudes and latitudes 90 / 2^m apart
-    (m up to 14), 22,374 missed with closed triangles alone.
+    child 3, which does not hold it either. About 0.4% of random points hit one at a
+    deep level, meters from their trixel; a point at or near a deeper vertex hits one
+    at a shallow level, up to thousands of km away (latitude 0 at longitude 22.5, for
+    one). Of 655,340 points on the root-mesh edges at longitudes and latitudes
+    90 / 2^m apart (m up to 14), 22,374 missed with closed triangles alone.
 
   The descent now tests children 0..2 with closed triangles (`>= 0`), so a point on an
   edge goes to the first that holds it; takes child 3 only when it holds the point
-  (its edges are the exact negations of the other children's inner edges, so the test
-  costs nothing); and otherwise takes the child the point is least outside of, the
-  first on a tie. All 655,340 edge points get a trixel that holds them, and `getId`
-  runs at the same speed (`htm_bench`, i9-9980HK, three interleaved runs, within
-  their noise). `insideVertex_Trixel` is closed as well.
+  (its edges are the exact negations of the other children's inner edges); and
+  otherwise takes the child the point is least outside of, the first on a tie. All
+  655,340 edge points get a trixel that holds them. `getId` is about 3% slower (median
+  820 against 797 ns, strict interleaved runs on the i9-9980HK). `insideVertex_Trixel`
+  is closed as well.
+- `intersectConstraints` clamps the dot product of the two centers to [-1, 1] before
+  `acos`. Nearly equal centers rounded it above 1, `acos` gave NaN, and the circles
+  read as disjoint: a 1 m circle missed its own center's trixel for about 0.1% of
+  random centers, a 3 m circle for 0.02%.
 
 ### Changed
 
 - Ids change for points on a root-mesh edge (a zero coordinate: latitude 0, longitude
-  0, the poles, exact axis-plane vectors), for exact vertices and edge midpoints of
-  deeper trixels, and for 0.42% of other points, at levels 20 to 25, whose old id lay
-  outside its trixel by up to 7.74 m. No other id changes: `htm_diff 1000000` holds
-  1,125,000 random points to the old ids except the 4,705 the descent finds in a
-  sliver.
-- Reindex every stored point with a zero coordinate: its old id is up to 6,090 km
-  away, and a query around the point misses it. For ids identical to what `getId`
-  now returns, reindex all stored points: the other changed ids moved by at most
-  7.74 m.
+  0, the poles, exact axis-plane vectors), which move up to thousands of km; for points
+  at or near a vertex of a deeper trixel, also up to thousands of km; and for about
+  0.4% of all other points, whose old trixel lay meters away (tens of meters seen).
+  Every changed id's old trixel did not hold its point: `htm_diff 1000000` holds its
+  1,125,000 random points to the old ids except those the descent finds in a sliver.
+- Reindex all stored geo points. Points with a zero coordinate certainly moved far,
+  but points without one moved too, some by thousands of km, and a circle around them
+  misses their old ids.
 - `test/golden.h` keeps its 396 points with the new ids (238 change), and the 48
   probes in `htm.cc` that detect a fusing build carry their new ids (19 change).
 - `htm_edge` tests points on every root-mesh edge, 10,360 of them: each id's trixel
-  holds its point, and a 1 km circle around the point covers it.
+  holds its point, and a 1 km circle around the point covers it. It also checks that
+  1 m and 3 m circles around 50,000 random centers cover their center's id.
 
 ## 2026-11-01
 

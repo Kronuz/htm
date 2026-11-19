@@ -49,9 +49,8 @@ edges lie on the axis planes, where every product with the zero coordinate is ex
 zero, so that tie is exact on every build. Child `3` is taken only when it holds the point;
 its edges are the exact negations of the inner edges of children `0..2`, so that costs no
 products. The midpoints are rounded, so the children's edges miss the parent's by rounding
-and can leave a point in no child (0.42% of random points, from level 20 down, and points
-near a deeper vertex on a root-mesh edge); the descent then takes the child the point is
-least outside of.
+and can leave a point in no child (about 0.4% of random points, and points at or near a
+deeper vertex); the descent then takes the child the point is least outside of.
 `getId` shifts left two bits and adds the child's digit. It runs a fixed
 `HTM_MAX_LEVEL` iterations, so every point gets a full-depth id.
 `getTrixelName(coord)` is `getTrixelName(getId(coord))`.

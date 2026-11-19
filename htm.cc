@@ -430,7 +430,8 @@ HTM::getBoundingCircle(const Cartesian& v0, const Cartesian& v1, const Cartesian
 bool
 HTM::intersectConstraints(const Constraint& c1, const Constraint& c2)
 {
-	return std::acos(c1.center * c2.center) < (c1.arcangle + c2.arcangle);
+	// The dot of nearly equal unit vectors can round above 1; acos would give NaN.
+	return std::acos(std::clamp(c1.center * c2.center, -1.0, 1.0)) < (c1.arcangle + c2.arcangle);
 }
 
 

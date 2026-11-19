@@ -20,6 +20,7 @@
 // vertices/midpoints at many levels.
 //
 // Usage: htm_diff_test [random_points]   (default 200,000)
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -33,7 +34,15 @@
 #include "htm.h"
 #include "ieee.h"
 
-static size_t checked = 0, failures = 0, fused_diffs = 0, random_checked = 0, random_rescued = 0;
+static size_t checked = 0, failures = 0, fused_diffs = 0, random_checked = 0, random_rescued = 0, random_changed = 0;
+static double worst_changed_m = 0;
+
+// Meters a point lies outside the trixel of id, 0 when inside: the farthest past one of its edges.
+static double outside_m(const Cartesian& p, uint64_t id) {
+	auto [v0, v1, v2] = HTM::getCorners(HTM::getTrixelName(id));
+	auto past = [&](const Cartesian& a, const Cartesian& b) { auto n = a ^ b; return -(n * p) / std::sqrt(n * n); };
+	return std::max({0.0, past(v0, v1), past(v1, v2), past(v2, v0)}) * M_PER_RADIUS_EARTH;
+}
 static bool frozen_exact = true;
 
 // Whether the Cartesian operators (cartesian.cc) round every operation on their
@@ -67,9 +76,19 @@ static void check(double x, double y, double z, bool names, bool random = false)
 		size_t nearest = 0;
 		ieee::getId(c, &nearest);
 		random_rescued += nearest != 0;
-		if (ieee::getId<false>(c) != b && nearest == 0 && ++failures <= 10) {
+		uint64_t before = ieee::getId<false>(c);
+		if (before != b && nearest == 0 && ++failures <= 10) {
 			std::printf("OFF-EDGE ID CHANGED (%.17g %.17g %.17g): %llu vs %llu\n", x, y, z,
-				(unsigned long long)ieee::getId<false>(c), (unsigned long long)b);
+				(unsigned long long)before, (unsigned long long)b);
+		}
+		// A changed id's new trixel holds the point within double rounding of a level-25 cell.
+		if (before != b) {
+			++random_changed;
+			double m = outside_m(c, b);
+			worst_changed_m = std::max(worst_changed_m, m);
+			if (m > 0.05 && ++failures <= 10) {
+				std::printf("NEW TRIXEL %.3g m FROM (%.17g %.17g %.17g)\n", m, x, y, z);
+			}
 		}
 	}
 	if (a != b) {
@@ -189,6 +208,8 @@ int main(int argc, char** argv) {
 
 	std::printf("random points held to the open-triangle ids: %zu, %zu of them left in no child by rounding\n",
 		random_checked, random_rescued);
+	std::printf("changed ids: %zu, each at a level that left the point in no child; new trixel at most %.3g m away\n",
+		random_changed, worst_changed_m);
 	std::printf("checked %zu, failures %zu%s", checked, failures, frozen_exact ? "\n" : "");
 	if (!frozen_exact) {
 		std::printf(" (the Cartesian operators fuse on this build: the frozen walk differs on %zu points)\n", fused_diffs);

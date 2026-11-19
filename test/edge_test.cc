@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <random>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -172,5 +173,26 @@ int main() {
 	}
 
 	std::printf("edge points: checked %zu, failures %zu\n", checked, failures);
+
+	// Small circles cover their own center's id (intersectConstraints clamps its dot product).
+	size_t circle_misses = 0;
+	std::mt19937_64 rng(20261119);
+	std::normal_distribution<double> g(0, 1);
+	for (int i = 0; i < 50000; ++i) {
+		Cartesian p(g(rng), g(rng), g(rng));
+		p.normalize();
+		uint64_t id = HTM::getId(p);
+		for (double radius : {1.0, 3.0}) {
+			bool covered = false;
+			for (const auto& r : cover(Constraint(p, radius))) {
+				covered = covered || (r.start <= id && id <= r.end);
+			}
+			if (!covered && ++circle_misses <= 10) {
+				std::printf("FAIL %g m circle misses its center (%.17g %.17g %.17g)\n", radius, p.x, p.y, p.z);
+			}
+		}
+	}
+	std::printf("small circles: 100000 checked, %zu miss their center\n", circle_misses);
+	failures += circle_misses;
 	return failures ? 1 : 0;
 }
