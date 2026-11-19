@@ -1,5 +1,6 @@
 // Reference HTM::getId / getTrixelName that build a Cartesian per midpoint: the
-// oracle for the differential test and the benchmark. Keep them unchanged.
+// oracle for the differential test. Keep them unchanged but for the descent's rule:
+// a point on an edge goes to the first child whose closed triangle holds it.
 #pragma once
 
 #include <cmath>
@@ -15,7 +16,7 @@ inline Cartesian frozen_mid(const Cartesian& v0, const Cartesian& v1) {
 }
 
 inline bool frozen_inside(const Cartesian& v, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) {
-	return (v0 ^ v1) * v > 0 && (v1 ^ v2) * v > 0 && (v2 ^ v0) * v > 0;
+	return (v0 ^ v1) * v >= 0 && (v1 ^ v2) * v >= 0 && (v2 ^ v0) * v >= 0;
 }
 
 inline uint64_t frozen_getId(const Cartesian& coord) {

@@ -47,6 +47,12 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   target_link_libraries(htm_diff_test PRIVATE htm)
   add_test(NAME htm_diff COMMAND htm_diff_test)
 
+  # Points on the root mesh's edges get a trixel that holds them, and a 1 km circle
+  # around each covers its id.
+  add_executable(htm_edge_test test/edge_test.cc)
+  target_link_libraries(htm_edge_test PRIVATE htm)
+  add_test(NAME htm_edge COMMAND htm_edge_test)
+
   # The ids must not depend on the compiler's floating-point contraction. The
   # same test runs against a second build of htm.cc with contraction allowed
   # everywhere (-ffp-contract=fast, and -mfma on x86 when this machine runs it),

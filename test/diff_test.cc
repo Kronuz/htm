@@ -11,6 +11,9 @@
 // deepest levels, on edge points anywhere. The test then counts the differences
 // and holds random points to the same first 16 levels.
 //
+// Random points must also keep the ids of the open-triangle rule (before 2026-11-18):
+// only points on an edge change.
+//
 // Inputs are random points on the sphere plus the cases that decide ties: poles,
 // axis planes, signed zeros, start-trixel edges, and exact trixel
 // vertices/midpoints at many levels.
@@ -29,7 +32,7 @@
 #include "htm.h"
 #include "ieee.h"
 
-static size_t checked = 0, failures = 0, fused_diffs = 0;
+static size_t checked = 0, failures = 0, fused_diffs = 0, random_checked = 0;
 static bool frozen_exact = true;
 
 // Whether the Cartesian operators (cartesian.cc) round every operation on their
@@ -55,6 +58,15 @@ static void check(double x, double y, double z, bool names, bool random = false)
 	if (bad && ++failures <= 10) {
 		std::printf("IEEE MISMATCH (%.17g %.17g %.17g): %llu vs %llu\n", x, y, z,
 			(unsigned long long)o, (unsigned long long)b);
+	}
+	// Only points on an edge change id with the closed-triangle rule; random points are off every edge.
+	if (random) {
+		++random_checked;
+		uint64_t before = ieee::getId<false>(c);
+		if (before != b && ++failures <= 10) {
+			std::printf("OFF-EDGE ID CHANGED (%.17g %.17g %.17g): %llu vs %llu\n", x, y, z,
+				(unsigned long long)before, (unsigned long long)b);
+		}
 	}
 	if (a != b) {
 		// The frozen walk and the new one differ only where its Cartesian operators fuse.
@@ -171,6 +183,7 @@ int main(int argc, char** argv) {
 		}
 	}
 
+	std::printf("random points held to the open-triangle ids: %zu\n", random_checked);
 	std::printf("checked %zu, failures %zu%s", checked, failures, frozen_exact ? "\n" : "");
 	if (!frozen_exact) {
 		std::printf(" (the Cartesian operators fuse on this build: the frozen walk differs on %zu points)\n", fused_diffs);

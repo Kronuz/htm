@@ -43,6 +43,10 @@ bits for the root (`10` for `N`, `11` for `S`) and two bits per level for each
 signs of `coord.x/y/z`. Then, level by level, the three edge midpoints are computed
 (`midPoint` averages two vertices and re-normalizes), and `insideVertex_Trixel` (a
 sign-of-cross-products test) decides which of the four children contains the point.
+The test is closed (`>= 0`): a point on an edge, such as one on the equator, a meridian
+0, 90, 180 or 270, or a pole, goes to the first of children `0..2` that holds it, and to
+child `3` only when none does. Root-mesh edges lie on the axis planes, where every
+product with the zero coordinate is exactly zero, so the tie is exact on every build.
 `getId` shifts left two bits and adds the child's digit. It runs a fixed
 `HTM_MAX_LEVEL` iterations, so every point gets a full-depth id.
 `getTrixelName(coord)` is `getTrixelName(getId(coord))`.

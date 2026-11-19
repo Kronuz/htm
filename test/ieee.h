@@ -39,11 +39,19 @@ inline double triple(const V& a, const V& b, const V& c) {
 }
 
 
+// Closed triangles put a point on an edge in the first child that holds it; open ones
+// (ids before 2026-11-18) send it to child 3, which does not hold it.
+template <bool Closed>
 inline bool inside(const V& v, const V& v0, const V& v1, const V& v2) {
-	return triple(v0, v1, v) > 0 && triple(v1, v2, v) > 0 && triple(v2, v0, v) > 0;
+	if constexpr (Closed) {
+		return triple(v0, v1, v) >= 0 && triple(v1, v2, v) >= 0 && triple(v2, v0, v) >= 0;
+	} else {
+		return triple(v0, v1, v) > 0 && triple(v1, v2, v) > 0 && triple(v2, v0, v) > 0;
+	}
 }
 
 
+template <bool Closed = true>
 inline uint64_t getId(const Cartesian& coord) {
 	const auto& t = HTM::startTrixel(coord);
 	V v0{start_vertices[t.v0].x, start_vertices[t.v0].y, start_vertices[t.v0].z};
@@ -54,11 +62,11 @@ inline uint64_t getId(const Cartesian& coord) {
 	for (size_t depth = 0; depth < HTM_MAX_LEVEL; ++depth) {
 		V w2 = mid(v0, v1), w0 = mid(v1, v2), w1 = mid(v2, v0);
 		id <<= 2;
-		if (inside(c, v0, w2, w1)) {
+		if (inside<Closed>(c, v0, w2, w1)) {
 			v1 = w2; v2 = w1;
-		} else if (inside(c, v1, w0, w2)) {
+		} else if (inside<Closed>(c, v1, w0, w2)) {
 			id += 1; v0 = v1; v1 = w0; v2 = w2;
-		} else if (inside(c, v2, w1, w0)) {
+		} else if (inside<Closed>(c, v2, w1, w0)) {
 			id += 2; v0 = v2; v1 = w1; v2 = w0;
 		} else {
 			id += 3; v0 = w0; v1 = w1; v2 = w2;

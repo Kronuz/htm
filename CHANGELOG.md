@@ -6,6 +6,33 @@ library has no releases.
 
 Upgrading a pin from before 2026-10-30: [the consumer upgrade note](https://github.com/Kronuz/cpp-libraries/blob/main/docs/UPGRADING-2026-10.md#htm) lists what changes for callers, how to find affected inputs, the commits not to pin, and the speedup.
 
+## 2026-11-18
+
+### Fixed
+
+- `getId(Cartesian)` gives a point on an edge of the root mesh the id of a trixel that
+  holds it. The descent tested each child with open triangles (`> 0`), so a point
+  exactly on an edge belonged to no child but the last: it fell to child 3 at every
+  level and got `N3333...`-style ids thousands of km away, and a circle around the
+  point missed it. The test is now closed (`>= 0`): a point on an edge goes to the
+  first of children 0..2 that holds it. `insideVertex_Trixel` uses the same rule.
+
+### Changed
+
+- Ids change for points exactly on a root-mesh edge: the equator (latitude 0), the
+  meridians 0, 90, 180 and 270 where the vector has an exact zero `x` or `y` (a latitude
+  and longitude in degrees gives one at longitude 0), and the poles. These are the
+  points with a zero coordinate. Indexes that hold such points must reindex them: their
+  stored ids are the old ones, which a circle around the point does not cover. Points
+  that are an exact vertex or edge midpoint of a deeper trixel, as the descent computes
+  it, also change. Every other id is unchanged: 100,000 random points give the same ids
+  before and after (`test/compare_ids.sh`), and `htm_diff` holds its 225,000 random
+  points to the ids of the open rule.
+- `test/golden.h` keeps its 396 points with the ids of the closed rule: 92 change, 75
+  with a zero coordinate and 17 exact vertices or midpoints of deeper trixels.
+- `htm_edge` tests points on every root-mesh edge: each id's trixel holds its point and
+  a 1 km circle around the point covers it.
+
 ## 2026-11-01
 
 ### Added

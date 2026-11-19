@@ -437,7 +437,7 @@ HTM::intersectConstraints(const Constraint& c1, const Constraint& c2)
 bool
 HTM::insideVertex_Trixel( const Cartesian& v, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2)
 {
-	return (v0 ^ v1) * v > 0 && (v1 ^ v2) * v > 0 && (v2 ^ v0) * v > 0;
+	return (v0 ^ v1) * v >= 0 && (v1 ^ v2) * v >= 0 && (v2 ^ v0) * v >= 0;
 }
 
 
@@ -655,7 +655,7 @@ HTM_NOFUSE_FN inline V3 midpoint(const V3& a, const V3& b) noexcept {
 }
 
 
-// (a ^ b) * c > 0, as in HTM::insideVertex_Trixel's building block.
+// (a ^ b) * c, as in HTM::insideVertex_Trixel's building block.
 template <bool Round>
 HTM_NOFUSE_FN inline double triple(const V3& a, const V3& b, const V3& c) noexcept {
 	HTM_NOFUSE_BODY
@@ -669,7 +669,7 @@ HTM_NOFUSE_FN inline double triple(const V3& a, const V3& b, const V3& c) noexce
 template <bool Round>
 HTM_NOFUSE_FN inline bool inside(const V3& v, const V3& v0, const V3& v1, const V3& v2) noexcept {
 	HTM_NOFUSE_BODY
-	return triple<Round>(v0, v1, v) > 0 && triple<Round>(v1, v2, v) > 0 && triple<Round>(v2, v0, v) > 0;
+	return triple<Round>(v0, v1, v) >= 0 && triple<Round>(v1, v2, v) >= 0 && triple<Round>(v2, v0, v) >= 0;
 }
 
 
@@ -686,7 +686,7 @@ HTM_NOFUSE_FN uint64_t descend(const Cartesian& coord) noexcept {
 	const V3 c{coord.x, coord.y, coord.z};
 	auto id = start_trixel.id;
 
-	// Search in children's trixel
+	// A point on an edge goes to the first of children 0..2 whose closed triangle holds it.
 	int8_t depth = HTM_MAX_LEVEL;
 	while (depth-- > 0) {
 		auto w2 = midpoint<Round>(v0, v1);
