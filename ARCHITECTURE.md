@@ -44,9 +44,14 @@ signs of `coord.x/y/z`. Then, level by level, the three edge midpoints are compu
 (`midPoint` averages two vertices and re-normalizes), and `insideVertex_Trixel` (a
 sign-of-cross-products test) decides which of the four children contains the point.
 The test is closed (`>= 0`): a point on an edge, such as one on the equator, a meridian
-0, 90, 180 or 270, or a pole, goes to the first of children `0..2` that holds it, and to
-child `3` only when none does. Root-mesh edges lie on the axis planes, where every
-product with the zero coordinate is exactly zero, so the tie is exact on every build.
+0, 90, 180 or 270, or a pole, goes to the first of children `0..2` that holds it. Root-mesh
+edges lie on the axis planes, where every product with the zero coordinate is exactly
+zero, so that tie is exact on every build. Child `3` is taken only when it holds the point;
+its edges are the exact negations of the inner edges of children `0..2`, so that costs no
+products. The midpoints are rounded, so the children's edges miss the parent's by rounding
+and can leave a point in no child (0.42% of random points, from level 20 down, and points
+near a deeper vertex on a root-mesh edge); the descent then takes the child the point is
+least outside of.
 `getId` shifts left two bits and adds the child's digit. It runs a fixed
 `HTM_MAX_LEVEL` iterations, so every point gets a full-depth id.
 `getTrixelName(coord)` is `getTrixelName(getId(coord))`.

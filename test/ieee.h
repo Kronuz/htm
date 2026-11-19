@@ -5,6 +5,7 @@
 // this id on every build; the differential test and the golden table hold it to it.
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 
@@ -39,20 +40,37 @@ inline double triple(const V& a, const V& b, const V& c) {
 }
 
 
-// Closed triangles put a point on an edge in the first child that holds it; open ones
-// (ids before 2026-11-18) send it to child 3, which does not hold it.
+// The child of a trixel that holds c: the first of 0..3 whose closed triangle holds it,
+// else the one it is least outside of (the first on a tie). With open triangles
+// (Closed = false, the ids before 2026-11-18) it is the first of 0..2 that holds c
+// strictly, else 3.
 template <bool Closed>
-inline bool inside(const V& v, const V& v0, const V& v1, const V& v2) {
-	if constexpr (Closed) {
-		return triple(v0, v1, v) >= 0 && triple(v1, v2, v) >= 0 && triple(v2, v0, v) >= 0;
-	} else {
-		return triple(v0, v1, v) > 0 && triple(v1, v2, v) > 0 && triple(v2, v0, v) > 0;
+inline int child(const V& c, const V (&t)[4][3], size_t* nearest) {
+	double m[4];
+	for (int k = 0; k < 4; ++k) {
+		m[k] = std::min({triple(t[k][0], t[k][1], c), triple(t[k][1], t[k][2], c), triple(t[k][2], t[k][0], c)});
 	}
+	if constexpr (!Closed) {
+		for (int k = 0; k < 3; ++k) {
+			if (m[k] > 0) return k;
+		}
+		return 3;
+	}
+	for (int k = 0; k < 4; ++k) {
+		if (m[k] >= 0) return k;
+	}
+	int best = 0;
+	for (int k = 1; k < 4; ++k) {
+		if (m[k] > m[best]) best = k;
+	}
+	if (nearest) ++*nearest;
+	return best;
 }
 
 
+// nearest, when given, counts the levels where rounding left the point in no child.
 template <bool Closed = true>
-inline uint64_t getId(const Cartesian& coord) {
+inline uint64_t getId(const Cartesian& coord, size_t* nearest = nullptr) {
 	const auto& t = HTM::startTrixel(coord);
 	V v0{start_vertices[t.v0].x, start_vertices[t.v0].y, start_vertices[t.v0].z};
 	V v1{start_vertices[t.v1].x, start_vertices[t.v1].y, start_vertices[t.v1].z};
@@ -61,16 +79,10 @@ inline uint64_t getId(const Cartesian& coord) {
 	uint64_t id = t.id;
 	for (size_t depth = 0; depth < HTM_MAX_LEVEL; ++depth) {
 		V w2 = mid(v0, v1), w0 = mid(v1, v2), w1 = mid(v2, v0);
-		id <<= 2;
-		if (inside<Closed>(c, v0, w2, w1)) {
-			v1 = w2; v2 = w1;
-		} else if (inside<Closed>(c, v1, w0, w2)) {
-			id += 1; v0 = v1; v1 = w0; v2 = w2;
-		} else if (inside<Closed>(c, v2, w1, w0)) {
-			id += 2; v0 = v2; v1 = w1; v2 = w0;
-		} else {
-			id += 3; v0 = w0; v1 = w1; v2 = w2;
-		}
+		const V children[4][3] = {{v0, w2, w1}, {v1, w0, w2}, {v2, w1, w0}, {w0, w1, w2}};
+		int k = child<Closed>(c, children, nearest);
+		id = (id << 2) + k;
+		v0 = children[k][0]; v1 = children[k][1]; v2 = children[k][2];
 	}
 	return id;
 }

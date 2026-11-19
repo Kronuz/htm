@@ -1,8 +1,10 @@
 // Reference HTM::getId / getTrixelName that build a Cartesian per midpoint: the
 // oracle for the differential test. Keep them unchanged but for the descent's rule:
-// a point on an edge goes to the first child whose closed triangle holds it.
+// the first of children 0..3 whose closed triangle holds the point, else the one it is
+// least outside of.
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <string>
@@ -15,8 +17,19 @@ inline Cartesian frozen_mid(const Cartesian& v0, const Cartesian& v1) {
 	return w;
 }
 
-inline bool frozen_inside(const Cartesian& v, const Cartesian& v0, const Cartesian& v1, const Cartesian& v2) {
-	return (v0 ^ v1) * v >= 0 && (v1 ^ v2) * v >= 0 && (v2 ^ v0) * v >= 0;
+inline int frozen_child(const Cartesian& c, const Cartesian (&t)[4][3]) {
+	double m[4];
+	for (int k = 0; k < 4; ++k) {
+		m[k] = std::min({(t[k][0] ^ t[k][1]) * c, (t[k][1] ^ t[k][2]) * c, (t[k][2] ^ t[k][0]) * c});
+	}
+	for (int k = 0; k < 4; ++k) {
+		if (m[k] >= 0) return k;
+	}
+	int best = 0;
+	for (int k = 1; k < 4; ++k) {
+		if (m[k] > m[best]) best = k;
+	}
+	return best;
 }
 
 inline uint64_t frozen_getId(const Cartesian& coord) {
@@ -30,16 +43,10 @@ inline uint64_t frozen_getId(const Cartesian& coord) {
 		auto w2 = frozen_mid(v0, v1);
 		auto w0 = frozen_mid(v1, v2);
 		auto w1 = frozen_mid(v2, v0);
-		id <<= 2;
-		if (frozen_inside(coord, v0, w2, w1)) {
-			v1 = w2; v2 = w1;
-		} else if (frozen_inside(coord, v1, w0, w2)) {
-			id += 1; v0 = v1; v1 = w0; v2 = w2;
-		} else if (frozen_inside(coord, v2, w1, w0)) {
-			id += 2; v0 = v2; v1 = w1; v2 = w0;
-		} else {
-			id += 3; v0 = w0; v1 = w1; v2 = w2;
-		}
+		const Cartesian children[4][3] = {{v0, w2, w1}, {v1, w0, w2}, {v2, w1, w0}, {w0, w1, w2}};
+		int k = frozen_child(coord, children);
+		id = (id << 2) + k;
+		v0 = children[k][0]; v1 = children[k][1]; v2 = children[k][2];
 	}
 	return id;
 }
@@ -71,16 +78,10 @@ inline std::string frozen_getTrixelName(const Cartesian& coord) {
 		auto w2 = frozen_mid(v0, v1);
 		auto w0 = frozen_mid(v1, v2);
 		auto w1 = frozen_mid(v2, v0);
-		if (frozen_inside(coord, v0, w2, w1)) {
-			name.push_back('0'); v1 = w2; v2 = w1;
-		} else if (frozen_inside(coord, v1, w0, w2)) {
-			name.push_back('1'); v0 = v1; v1 = w0; v2 = w2;
-		} else if (frozen_inside(coord, v2, w1, w0)) {
-			name.push_back('2'); v0 = v2; v1 = w1; v2 = w0;
-		} else {
-			name.push_back('3'); v0 = w0; v1 = w1; v2 = w2;
-		}
+		const Cartesian children[4][3] = {{v0, w2, w1}, {v1, w0, w2}, {v2, w1, w0}, {w0, w1, w2}};
+		int k = frozen_child(coord, children);
+		name.push_back('0' + k);
+		v0 = children[k][0]; v1 = children[k][1]; v2 = children[k][2];
 	}
 	return name;
 }
-

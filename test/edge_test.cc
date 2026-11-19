@@ -2,7 +2,8 @@
 // 270, and the poles. Each gets the id of a trixel that holds it, and a 1 km circle
 // around it covers that id (the circle cover of Xapiand's geospatial Circle, built
 // from the same HTM helpers). With open triangles such a point fell through to
-// child 3 at every level and got an id thousands of km away.
+// child 3 at every level and got an id thousands of km away; near a deeper vertex,
+// rounding can leave it in no child, and child 3 then does not hold it either.
 //
 // Usage: htm_edge_test
 #include <cmath>
@@ -102,9 +103,10 @@ static void check(const char* what, Cartesian p) {
 	bool same = HTM::getId(q) == id;
 
 	if (!holds || !covered || !same) {
-		++failures;
-		std::printf("FAIL %s (%.17g %.17g %.17g): %s%s%s%s\n", what, p.x, p.y, p.z, name.c_str(),
-			holds ? "" : " does not hold it", covered ? "" : ", 1 km circle misses it", same ? "" : ", signed zeros differ");
+		if (++failures <= 20) {
+			std::printf("FAIL %s (%.17g %.17g %.17g): %s%s%s%s\n", what, p.x, p.y, p.z, name.c_str(),
+				holds ? "" : " does not hold it", covered ? "" : ", 1 km circle misses it", same ? "" : ", signed zeros differ");
+		}
 	}
 }
 
@@ -138,6 +140,20 @@ int main() {
 		check("lon 90, x = 0", Cartesian(0.0, c, s));
 		check("lon 180, y = 0", Cartesian(-c, 0.0, s));
 		check("lon 270, x = 0", Cartesian(0.0, -c, s));
+	}
+
+	// Dyadic longitudes on the equator and latitudes on the four meridians, 90 / 2^m
+	// apart: points on a root-mesh edge that are also (within rounding) a vertex of a
+	// deeper trixel, where rounding can leave the point in no child.
+	for (int m = 0; m <= 8; ++m) {
+		int steps = 4 << m;
+		for (int k = 0; k < steps; ++k) {
+			double a = -180.0 + 360.0 * k / steps;
+			check_degrees(0, a);
+			for (double lon : {0.0, 90.0, 180.0, -90.0}) {
+				check_degrees(a / 2, lon);
+			}
+		}
 	}
 
 	// The poles and the other root vertices, and the midpoints of root edges.

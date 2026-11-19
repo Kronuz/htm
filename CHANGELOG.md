@@ -10,28 +10,40 @@ Upgrading a pin from before 2026-10-30: [the consumer upgrade note](https://gith
 
 ### Fixed
 
-- `getId(Cartesian)` gives a point on an edge of the root mesh the id of a trixel that
-  holds it. The descent tested each child with open triangles (`> 0`), so a point
-  exactly on an edge belonged to no child but the last: it fell to child 3 at every
-  level and got `N3333...`-style ids thousands of km away, and a circle around the
-  point missed it. The test is now closed (`>= 0`): a point on an edge goes to the
-  first of children 0..2 that holds it. `insideVertex_Trixel` uses the same rule.
+- `getId(Cartesian)` gives every point the id of a trixel that holds it. Two causes
+  left a point in a trixel that does not:
+  - The descent tested children 0..2 with open triangles (`> 0`), so a point exactly
+    on an edge of the root mesh (the equator, the meridians 0, 90, 180 and 270, the
+    poles) belonged to none of them and fell to child 3 at every level: an
+    `N3333...`-style id up to 6,090 km away, which a circle around the point missed.
+  - The children's midpoints are rounded, so their edges miss the parent's edges by
+    rounding and leave slivers of a trixel in no child. A point in a sliver fell to
+    child 3, which does not hold it either: 4,215 of 1,000,000 random points, from
+    level 20 down, up to 7.74 m outside their trixel; and, on the root-mesh edges, a
+    point near a deeper vertex (latitude 0 at longitude 22.5, for one), up to 1,850 km.
+    Of 655,340 points on the root-mesh edges at longitudes and latitudes 90 / 2^m apart
+    (m up to 14), 22,374 missed with closed triangles alone.
+
+  The descent now tests children 0..2 with closed triangles (`>= 0`), so a point on an
+  edge goes to the first that holds it; takes child 3 only when it holds the point
+  (its edges are the exact negations of the other children's inner edges, so the test
+  costs nothing); and otherwise takes the child the point is least outside of, the
+  first on a tie. All 655,340 edge points get a trixel that holds them, and `getId`
+  runs at the same speed (`htm_bench`, i9-9980HK, three interleaved runs, within
+  their noise). `insideVertex_Trixel` is closed as well.
 
 ### Changed
 
-- Ids change for points exactly on a root-mesh edge: the equator (latitude 0), the
-  meridians 0, 90, 180 and 270 where the vector has an exact zero `x` or `y` (a latitude
-  and longitude in degrees gives one at longitude 0), and the poles. These are the
-  points with a zero coordinate. Indexes that hold such points must reindex them: their
-  stored ids are the old ones, which a circle around the point does not cover. Points
-  that are an exact vertex or edge midpoint of a deeper trixel, as the descent computes
-  it, also change. Every other id is unchanged: 100,000 random points give the same ids
-  before and after (`test/compare_ids.sh`), and `htm_diff` holds its 225,000 random
-  points to the ids of the open rule.
-- `test/golden.h` keeps its 396 points with the ids of the closed rule: 92 change, 75
-  with a zero coordinate and 17 exact vertices or midpoints of deeper trixels.
-- `htm_edge` tests points on every root-mesh edge: each id's trixel holds its point and
-  a 1 km circle around the point covers it.
+- Ids change for the points above: points with a zero coordinate (on a root-mesh
+  edge), exact vertices and edge midpoints of deeper trixels, and random points in a
+  sliver (0.42%, at levels 20 to 25). No other id changes: `htm_diff` holds its
+  225,000 random points to the old ids except the 972 the descent finds in a sliver.
+  Indexes must reindex points with a zero coordinate, whose stored ids are up to
+  6,090 km off; the other changed ids were within 7.74 m of their point.
+- `test/golden.h` keeps its 396 points with the new ids (238 change), and the 48
+  probes in `htm.cc` that detect a fusing build carry their new ids (19 change).
+- `htm_edge` tests points on every root-mesh edge, 10,360 of them: each id's trixel
+  holds its point, and a 1 km circle around the point covers it.
 
 ## 2026-11-01
 
