@@ -150,7 +150,8 @@ CTest `htm_diff` checks `getId` and `getTrixelName` on random points, poles, sig
 axis planes and trixel vertices and midpoints against an IEEE-754 reference
 (`test/ieee.h`), golden ids (`test/golden.h`) and the `Cartesian`-object walk
 (`test/frozen.h`). `htm_fma` and `htm_rounded` run the same test on builds of `htm.cc` with
-`-ffp-contract=fast` (and `-mfma` on x86).
+`-ffp-contract=fast` (and `-mfma` on x86). `htm_edge` checks that points on the root
+mesh's edges get a trixel that holds them and that a 1 km circle around each covers its id.
 
 ## 🤝 Contributing
 

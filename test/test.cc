@@ -36,14 +36,15 @@ static const size_t kFullLen = HTM_MAX_LENGTH_NAME;  // 27
 
 static void test_naming_and_id() {
 	struct { double x, y, z; const char* root; uint64_t id; } cases[] = {
-		// startTrixel routes by the octant of (x, y, z).
-		{ 1.0,  0.0,  0.0, "N3", 13510798882111487ull},  // +X, z>=0 -> N3
-		{ 0.0,  0.0,  1.0, "N3", 13510798882111487ull},  // +Z pole -> N3
+		// startTrixel routes by the octant of (x, y, z); a root vertex goes to the
+		// first child that holds it, then stays at that child's corner (digit 0).
+		{ 1.0,  0.0,  0.0, "N3", 12947848928690176ull},  // +X, z>=0 -> N32000...
+		{ 0.0,  0.0,  1.0, "N3", 12666373951979520ull},  // +Z pole -> N31000...
 		{ 1.0,  1.0,  1.0, "N3", 13510798882111487ull},  // first octant -> N3
-		{-1.0,  0.0,  0.0, "N1", 11258999068426239ull},  // -X -> N1
-		{ 0.0,  1.0,  0.0, "N2", 12384898975268863ull},  // +Y -> N2
-		{ 0.0, -1.0,  0.0, "N0", 10133099161583615ull},  // -Y -> N0
-		{ 0.0,  0.0, -1.0, "S0", 14636698788954111ull},  // -Z pole -> S0
+		{-1.0,  0.0,  0.0, "N1", 10696049115004928ull},  // -X -> N12000...
+		{ 0.0,  1.0,  0.0, "N2", 11821949021847552ull},  // +Y -> N22000...
+		{ 0.0, -1.0,  0.0, "N0", 9570149208162304ull},   // -Y -> N02000...
+		{ 0.0,  0.0, -1.0, "S0", 13792273858822144ull},  // -Z pole -> S01000...
 		{-1.0, -1.0, -1.0, "S2", 16888498602639359ull},  // last octant -> S2
 	};
 
