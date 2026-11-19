@@ -34,12 +34,16 @@ Upgrading a pin from before 2026-10-30: [the consumer upgrade note](https://gith
 
 ### Changed
 
-- Ids change for the points above: points with a zero coordinate (on a root-mesh
-  edge), exact vertices and edge midpoints of deeper trixels, and random points in a
-  sliver (0.42%, at levels 20 to 25). No other id changes: `htm_diff` holds its
-  225,000 random points to the old ids except the 972 the descent finds in a sliver.
-  Indexes must reindex points with a zero coordinate, whose stored ids are up to
-  6,090 km off; the other changed ids were within 7.74 m of their point.
+- Ids change for points on a root-mesh edge (a zero coordinate: latitude 0, longitude
+  0, the poles, exact axis-plane vectors), for exact vertices and edge midpoints of
+  deeper trixels, and for 0.42% of other points, at levels 20 to 25, whose old id lay
+  outside its trixel by up to 7.74 m. No other id changes: `htm_diff 1000000` holds
+  1,125,000 random points to the old ids except the 4,705 the descent finds in a
+  sliver.
+- Reindex every stored point with a zero coordinate: its old id is up to 6,090 km
+  away, and a query around the point misses it. For ids identical to what `getId`
+  now returns, reindex all stored points: the other changed ids moved by at most
+  7.74 m.
 - `test/golden.h` keeps its 396 points with the new ids (238 change), and the 48
   probes in `htm.cc` that detect a fusing build carry their new ids (19 change).
 - `htm_edge` tests points on every root-mesh edge, 10,360 of them: each id's trixel
