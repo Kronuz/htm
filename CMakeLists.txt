@@ -17,10 +17,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cartesian)
 
 # --- Library target ---
-# htm is not header-only: htm.cc carries the trixel naming/id/range/set-operation
-# code and constraint.cc carries the Constraint spherical-cap primitive, so both
-# must be compiled and linked. The headers alone only declare the API.
-add_library(htm htm.cc constraint.cc)
+# htm is not header-only: htm.cc, htm_descent.cc and htm_set_ops.cc carry the
+# trixel naming/id/range/set-operation code (docs/source-layout.md) and
+# constraint.cc the Constraint spherical-cap primitive, so all must be compiled
+# and linked. The headers alone only declare the API.
+set(HTM_SOURCES htm.cc htm_descent.cc htm_set_ops.cc constraint.cc)
+add_library(htm ${HTM_SOURCES})
 target_include_directories(htm PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_compile_features(htm PUBLIC cxx_std_20)
 
@@ -54,7 +56,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   add_test(NAME htm_edge COMMAND htm_edge_test)
 
   # The ids must not depend on the compiler's floating-point contraction. The
-  # same test runs against a second build of htm.cc with contraction allowed
+  # same test runs against a second build of htm with contraction allowed
   # everywhere (-ffp-contract=fast, and -mfma on x86 when this machine runs it),
   # which is where a fused multiply-add can change an id.
   include(CheckCXXCompilerFlag)
@@ -73,7 +75,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         list(APPEND HTM_FMA_FLAGS -mfma)
       endif()
     endif()
-    add_library(htm_fma STATIC htm.cc constraint.cc)
+    add_library(htm_fma STATIC ${HTM_SOURCES})
     target_include_directories(htm_fma PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
     target_compile_features(htm_fma PUBLIC cxx_std_20)
     target_compile_options(htm_fma PRIVATE ${HTM_FMA_FLAGS})
@@ -84,7 +86,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
     # The same, with getId forced onto the form that rounds each product behind an
     # asm: the form it falls back to when a compiler fuses despite the pragma.
-    add_library(htm_rounded STATIC htm.cc constraint.cc)
+    add_library(htm_rounded STATIC ${HTM_SOURCES})
     target_include_directories(htm_rounded PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
     target_compile_features(htm_rounded PUBLIC cxx_std_20)
     target_compile_options(htm_rounded PRIVATE ${HTM_FMA_FLAGS})
