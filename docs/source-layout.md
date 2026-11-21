@@ -1,24 +1,17 @@
 # Source layout
 
-The library is one STATIC target, `htm`, built from the `HTM_SOURCES` list in `CMakeLists.txt`.
-`htm.h` is the only header users include; it includes `constraint.h`. The test-only builds
-`htm_fma` and `htm_rounded` compile the same list with other flags.
+The library is one STATIC target, `htm`, built from `htm.cc` and `constraint.cc`. `htm.h` is the
+only header users include; it includes `constraint.h`. The test-only builds `htm_fma` and
+`htm_rounded` compile the same two files with other flags.
 
 ## The library
 
 | File | Holds |
 |---|---|
 | `htm.h` | The `HTM` namespace API, the `trixel_t` / `range_t` / `index_t` types and the start tables. |
-| `htm.cc` | Trixel geometry helpers (`startTrixel`, `midPoint`, the constraint and edge tests), `getTrixelName`, `getId(name)`, `getRange`, `getTrixels`, `getIdTrixels` and `getCorners`. |
-| `htm_descent.cc` | `getId(Cartesian)`: the point-to-id descent on plain three-double vectors, its plain and rounded forms (`HTM_NOFUSE_*`, `HTM_MUL`, `rounded_mul`), the probe table and the first-call check that picks a form. The MSVC `fp_contract(off)` region lies inside this file. |
-| `htm_set_ops.cc` | Set operations on sorted trixel and range lists: `trixel_*` and `range_*` union, intersection and exclusive disjunction with their helpers, then `simplifyTrixels` and `simplifyRanges`. |
+| `htm.cc` | The implementation, in three sections: set operations, geometry and ids, the descent (below). |
 | `constraint.h` | The `Constraint` spherical cap and the earth-radius constants. |
 | `constraint.cc` | `Constraint`'s out-of-line methods. |
-
-The descent is its own file because its floating-point rules (no contraction, every arithmetic
-expression through `HTM_MUL`, the probes kept with both forms) apply to it alone; outside it the
-code follows the compiler's contraction mode. No piece shares a helper with another: each
-`static` helper sits with the functions that call it.
 
 ## Tests
 
@@ -32,4 +25,23 @@ code follows the compiler's contraction mode. No piece shares a helper with anot
 
 ## Kept whole
 
-No file is over 1,000 lines.
+`htm.cc` (1,051 lines) stays one file:
+
+1. Consumers compile it by path: Xapiand's `CMakeLists.txt` lists `${htm_SOURCE_DIR}/htm.cc` in
+   its source list. A split changes every consumer's source list and breaks its link until each
+   one repins, so the single-file contract stays unless the owner decides otherwise.
+2. It is 5% over the 1,000-line mark, and its three sections already read apart inside it.
+
+If the owner ever wants it split, the cut is these three files, moves only:
+
+| File | Holds | Lines of `htm.cc` |
+|---|---|---|
+| `htm_set_ops.cc` | `trixel_*` and `range_*` union, intersection and exclusive disjunction with their `static` helpers, then `simplifyTrixels` and `simplifyRanges`. | 34-382, 490-559 |
+| `htm.cc` | Geometry helpers (`startTrixel`, `midPoint`, the constraint and edge tests), `getTrixelName`, `getId(name)`, `getRange`, `getTrixels`, `getIdTrixels`, `getCorners`. | 385-487, 851-1051 |
+| `htm_descent.cc` | `getId(Cartesian)`: the descent whose ids must not depend on fused multiply-add, its plain and rounded forms (`HTM_NOFUSE_*`, `HTM_MUL`, `rounded_mul`), the probe table and the first-call check, with the MSVC `fp_contract(off)` region. | 562-848 |
+
+The descent is the piece worth isolating: its floating-point rules apply to it alone. The split
+also needs, in the same change: one `HTM_SOURCES` list in `CMakeLists.txt` for `htm`, `htm_fma` and
+`htm_rounded`; the new files in `AGENTS.md`, `ARCHITECTURE.md`, `README.md` and the build command
+in `test/gen_golden.cc`; and, at the pin bump, `htm_descent.cc` and `htm_set_ops.cc` added to every
+consumer's source list beside `htm.cc` (Xapiand's `CMakeLists.txt`).
