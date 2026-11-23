@@ -31,6 +31,28 @@
 #include <utility>                                // for std::move
 
 
+const Cartesian start_vertices[6] = {
+	Cartesian(0.0,  0.0,  1.0),
+	Cartesian(1.0,  0.0,  0.0),
+	Cartesian(0.0,  1.0,  0.0),
+	Cartesian(-1.0, 0.0,  0.0),
+	Cartesian(0.0,  -1.0, 0.0),
+	Cartesian(0.0,  0.0,  -1.0),
+};
+
+
+const trixel_t start_trixels[8] = {
+	{ 8,  "N0", 1, 0, 4 },
+	{ 9,  "N1", 4, 0, 3 },
+	{ 10, "N2", 3, 0, 2 },
+	{ 11, "N3", 2, 0, 1 },
+	{ 12, "S0", 1, 5, 2 },
+	{ 13, "S1", 2, 5, 3 },
+	{ 14, "S2", 3, 5, 4 },
+	{ 15, "S3", 4, 5, 1 },
+};
+
+
 std::vector<std::string>
 HTM::trixel_union(std::vector<std::string>&& txs1, std::vector<std::string>&& txs2)
 {
