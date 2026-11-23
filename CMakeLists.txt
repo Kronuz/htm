@@ -53,6 +53,11 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   target_link_libraries(htm_edge_test PRIVATE htm)
   add_test(NAME htm_edge COMMAND htm_edge_test)
 
+  # The root mesh tables keep their values (one inline definition across TUs).
+  add_executable(htm_start_tables_test test/start_tables_test.cc)
+  target_link_libraries(htm_start_tables_test PRIVATE htm)
+  add_test(NAME htm_start_tables COMMAND htm_start_tables_test)
+
   # The ids must not depend on the compiler's floating-point contraction. The
   # same test runs against a second build of htm.cc with contraction allowed
   # everywhere (-ffp-contract=fast, and -mfma on x86 when this machine runs it),

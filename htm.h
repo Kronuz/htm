@@ -147,7 +147,7 @@ namespace std {
 }
 
 
-const Cartesian start_vertices[6] = {
+inline const Cartesian start_vertices[6] = {
 	Cartesian(0.0,  0.0,  1.0),
 	Cartesian(1.0,  0.0,  0.0),
 	Cartesian(0.0,  1.0,  0.0),
@@ -157,7 +157,7 @@ const Cartesian start_vertices[6] = {
 };
 
 
-const trixel_t start_trixels[8] = {
+inline const trixel_t start_trixels[8] = {
 	{ 8,  "N0", 1, 0, 4 },
 	{ 9,  "N1", 4, 0, 3 },
 	{ 10, "N2", 3, 0, 2 },
