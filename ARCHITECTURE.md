@@ -27,7 +27,8 @@ includes only `htm.h` and gets everything.
 The sphere starts as eight spherical triangles: four around the north pole
 (`N0..N3`) and four around the south (`S0..S3`), with vertices at the six axis
 points `(±1, 0, 0)`, `(0, ±1, 0)`, `(0, 0, ±1)`. These are the `start_vertices`
-and `start_trixels` tables in `htm.h`. Each trixel is then subdivided into four
+and `start_trixels` tables, declared in `htm.h` and defined once in `htm.cc`. Each
+trixel is then subdivided into four
 children by joining the midpoints of its three edges (projected back onto the
 sphere): the central child and the three corner children, numbered `0..3`.
 
